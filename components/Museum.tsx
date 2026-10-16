@@ -946,9 +946,11 @@ function ExhibitView({ spot, onSelect, pickRef }: { spot: Spot; onSelect: (i: nu
               </Safe>
             </group>
           </group>
-          {isCenter ? (
-            // podium keterangan di depan-kanan alas, menyerong ke arah pengunjung, tidak menghalangi pandangan
-            <group position={[4.4, 0, 3.4]} rotation-y={-0.6}>
+          {stage ? (
+            // podium keterangan di depan-kanan alas, menyerong ke arah pengunjung, tidak menghalangi pandangan.
+            // Panggung lorong juga memakai podium (dinding di sampingnya tertutup tiang lorong), di luar bentang bangunan 4,2 m
+            // supaya tidak menutupinya dari titik tur.
+            <group position={isCenter ? [4.4, 0, 3.4] : [2.7, 0, 2.2]} rotation-y={-0.6}>
               <mesh position={[0, 0.42, 0.12]}>
                 <boxGeometry args={[0.08, 0.84, 0.08]} />
                 <meshStandardMaterial color="#3f2614" />
@@ -956,8 +958,8 @@ function ExhibitView({ spot, onSelect, pickRef }: { spot: Spot; onSelect: (i: nu
               <Plaque title={exhibit.title} body={exhibit.description} position={[0, 1.0, 0]} rotationX={-0.5} width={1.6} height={0.8} />
             </group>
           ) : (
-            // di dinding belakang, di samping alas atau panggung
-            <Plaque title={exhibit.title} body={exhibit.description} position={[grand ? 3 : 1.5, 1.5, Math.abs(spot.x) - W / 2 + 0.03]} width={1.2} height={0.6} />
+            // di dinding belakang, di samping alas
+            <Plaque title={exhibit.title} body={exhibit.description} position={[1.5, 1.5, Math.abs(spot.x) - W / 2 + 0.03]} width={1.2} height={0.6} />
           )}
         </>
       )}
@@ -1034,8 +1036,9 @@ const Missing = () => (
 function Photo({ exhibit, events, target }: { exhibit: Exhibit; events: object; target: (g: Group | null) => void }) {
   const tex = useTexture(`/images/${exhibit.id}.jpg`);
   const img = tex.image as HTMLImageElement;
-  const h = exhibit.height;
-  const w = (h * img.width) / img.height;
+  // lebar maks 2,8 m: plakat di sampingnya harus berhenti sebelum tiang lorong (3 m dari tengah koleksi)
+  const w = Math.min((exhibit.height * img.width) / img.height, 2.8);
+  const h = (w * img.height) / img.width;
   return (
     <group position={[0, 1.75, 0]} ref={target} {...events}>
       <mesh position-z={0.03}>
