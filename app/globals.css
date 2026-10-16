@@ -151,9 +151,12 @@ body {
   rotate: -8deg;
 }
 
-/* Jatuhnya cap = umpan balik saat lulus kuis. */
+/* Jatuhnya cap = umpan balik saat lulus kuis; di paspor, cap-cap jatuh berurutan saat buku dibuka. */
 .cap-baru {
-  animation: cap-jatuh 450ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: cap-jatuh 450ms var(--lepas);
+}
+.cap-urut {
+  animation: cap-jatuh 450ms var(--lepas) backwards;
 }
 @keyframes cap-jatuh {
   from {
@@ -161,11 +164,259 @@ body {
     scale: 1.8;
   }
 }
+
+/* ===== Gerak =====
+   Bahasa geraknya tinta komik: datang cepat lalu melambat, pergi lebih cepat dari datang.
+   Semua animasi masuk berangkat dari keadaan akhir yang sudah terlihat (fill backwards), jadi isi tetap tampil kalau animasi mati. */
+:root {
+  --lepas: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Momen utama: sapuan tinta saat berpindah layar (menu, peta, ruang pamer), seperti membalik ke panel komik berikutnya.
+   Panel merah bertitik raster menutup layar lalu tersapu ke kanan, diikuti pita kunyit di ekornya. */
+.sapuan {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  overflow: hidden;
+  pointer-events: none;
+}
+/* Pembungkus yang meluncur hanya memakai `translate`; kemiringan ada di pseudo-elemennya (`transform`).
+   Jangan gabungkan keduanya di satu aturan: Lightning CSS melipat `translate` statis ke dalam `transform`,
+   sehingga keyframe yang menganimasikan `translate` tidak lagi menggeser panel. */
+.sapuan > span {
+  position: absolute;
+  inset: 0;
+  translate: 150vw 0;
+  /* tahan sebentar menutup layar, lalu menyapu tegas; ease-out murni hanya terlihat sebagai kedip */
+  animation: sapu 640ms cubic-bezier(0.65, 0, 0.35, 1) backwards;
+}
+.sapuan > span::before,
+.sapuan > span::after {
+  content: "";
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: -12vw;
+  transform: skewX(-12deg);
+}
+.sapuan > span::before {
+  width: 124vw;
+  border-right: 10px solid var(--sogan);
+  background: var(--bata) radial-gradient(rgb(23 18 14 / 0.28) 1.6px, transparent 2.2px) 0 0 / 12px 12px;
+}
+.sapuan > span::after {
+  width: 14vw;
+  border-inline: 8px solid var(--sogan);
+  background: var(--kunyit);
+}
+@keyframes sapu {
+  from {
+    translate: 0 0;
+  }
+}
+
+/* Judul sampul meninju masuk (menu utama, layar muat ruang pamer). */
+.judul-masuk {
+  animation: judul-masuk 650ms var(--lepas) backwards;
+}
+@keyframes judul-masuk {
+  from {
+    opacity: 0;
+    scale: 1.45;
+    rotate: -5deg;
+    filter: blur(6px);
+  }
+}
+
+/* Butir daftar menu muncul berurutan; jedanya dibatasi supaya menu cepat bisa dipakai. */
+.urut > * {
+  animation: geser-masuk 420ms var(--lepas) backwards;
+}
+.urut > :nth-child(2) {
+  animation-delay: 45ms;
+}
+.urut > :nth-child(3) {
+  animation-delay: 90ms;
+}
+.urut > :nth-child(4) {
+  animation-delay: 135ms;
+}
+.urut > :nth-child(5) {
+  animation-delay: 180ms;
+}
+.urut > :nth-child(n + 6) {
+  animation-delay: 225ms;
+}
+@keyframes geser-masuk {
+  from {
+    opacity: 0;
+    translate: -16px 0;
+  }
+}
+
+/* Foto latar menu perlahan mundur, memberi hidup tanpa mengalihkan dari judul. */
+.ken-burns {
+  animation: ken-burns 22s ease-out backwards;
+}
+@keyframes ken-burns {
+  from {
+    scale: 1.12;
+  }
+}
+
+/* Panel game terbuka seperti panel komik yang ditempel: naik, sedikit miring, lalu rata. */
+.panel-buka {
+  animation: panel-buka 300ms var(--lepas);
+}
+.panel-buka::backdrop {
+  animation: redup 220ms ease-out;
+}
+@keyframes panel-buka {
+  from {
+    opacity: 0;
+    translate: 0 20px;
+    scale: 0.96;
+    rotate: -1deg;
+  }
+}
+@keyframes redup {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Keterangan berganti saat pilihan berubah (provinsi di peta). */
+.ganti {
+  animation: ganti 260ms var(--lepas);
+}
+@keyframes ganti {
+  from {
+    opacity: 0;
+    translate: 12px 0;
+  }
+}
+
+/* Kotak narasi nama ruangan turun dari atas saat masuk ruang pamer. */
+.turun {
+  animation: turun 450ms 150ms var(--lepas) backwards;
+}
+@keyframes turun {
+  from {
+    opacity: 0;
+    translate: 0 -120%;
+  }
+}
+
+/* Kartu keterangan koleksi masuk dari kiri setiap kali koleksi lain dipilih. */
+.kartu-masuk {
+  animation: kartu-masuk 280ms var(--lepas);
+}
+@keyframes kartu-masuk {
+  from {
+    opacity: 0;
+    translate: -18px 0;
+    rotate: -1.5deg;
+  }
+}
+
+/* Balon kata di bawah crosshair menggembung saat bidikan pindah ke koleksi lain. */
+.balon-pop {
+  transform-origin: 50% 0;
+  animation: balon-pop 200ms var(--lepas);
+}
+@keyframes balon-pop {
+  from {
+    opacity: 0;
+    scale: 0.6;
+  }
+}
+
+/* Ajakan klik berdenyut pelan selama kursor belum dikunci. */
+.ajak {
+  animation: ajak 1.4s ease-in-out infinite alternate;
+}
+@keyframes ajak {
+  to {
+    scale: 1.06;
+  }
+}
+
+/* Provinsi terpilih di peta berdenyut, jadi jelas "dipilih", bukan belum tersedia. Animasinya dipasang oleh <style> di Game. */
+@keyframes denyut {
+  to {
+    fill: var(--kertas-2);
+    stroke-width: 3.2;
+  }
+}
+
+/* Umpan balik kuis: jawaban salah bergoyang, jawaban benar berkilat kunyit. */
+.goyang {
+  animation: goyang 380ms ease-out;
+}
+@keyframes goyang {
+  20% {
+    translate: -6px 0;
+  }
+  40% {
+    translate: 5px 0;
+  }
+  60% {
+    translate: -3px 0;
+  }
+  80% {
+    translate: 2px 0;
+  }
+}
+.kilap {
+  animation: kilap 900ms ease-out;
+}
+@keyframes kilap {
+  from {
+    background-color: var(--kunyit);
+  }
+}
+
+@keyframes pudar {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Gerak minimal: tanpa perpindahan ruang. Umpan balik dan pergantian keadaan tetap terbaca lewat pudar. */
 @media (prefers-reduced-motion: reduce) {
-  .cap-baru {
+  .sapuan {
+    display: none;
+  }
+  .ken-burns,
+  .ajak,
+  .goyang {
     animation: none;
+  }
+  .cap-baru,
+  .cap-urut,
+  .judul-masuk,
+  .urut > *,
+  .panel-buka,
+  .ganti,
+  .turun,
+  .kartu-masuk,
+  .balon-pop {
+    animation-name: pudar;
+  }
+  .peta [data-slug] path {
+    animation: none !important;
   }
   .tekan {
     transition: none;
   }
+}
+
+/* Permukaan bawaan browser ikut palet: seleksi teks kunyit, bilah gulir tinta. */
+::selection {
+  background: var(--kunyit);
+  color: var(--sogan);
+}
+.game {
+  scrollbar-color: var(--sogan-2) transparent;
 }

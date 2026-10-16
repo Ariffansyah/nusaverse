@@ -11,7 +11,10 @@ export const props = [
 // Tekstur lantai/dinding dan HDRI pencahayaan dari Poly Haven (CC0).
 export const polyhaven = { floor: "herringbone_parquet", wall: "beige_wall_001", hdri: "museum_of_ethnography" };
 
-export const shellCredits: Credit[] = Object.values(polyhaven).map((slug) => ({
+// Perabot galeri dari Poly Haven (CC0), disimpan sebagai public/models/{slug}.glb: bangku di lorong, pot di sudut.
+export const furniture = { bench: "chinese_sofa", plant: "potted_plant_02" };
+
+export const shellCredits: Credit[] = [...Object.values(polyhaven), ...Object.values(furniture)].map((slug) => ({
   title: slug,
   author: "Poly Haven",
   license: "CC0",

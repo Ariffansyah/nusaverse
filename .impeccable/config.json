@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "app/globals.css"
+        ],
+        "createdAt": "2026-10-16T13:44:35.340Z",
+        "reason": "agent triage: the only one-sided thick border in this file is the ink leading edge of the full-viewport screen-transition sweep (.sapuan > span::before), not a card accent"
+      }
+    ]
+  }
+}

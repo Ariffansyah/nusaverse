@@ -3,8 +3,8 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { polyhaven, props } from "../data/assets.ts";
+import { basename, dirname, join } from "node:path";
+import { furniture, polyhaven, props } from "../data/assets.ts";
 import { provinces } from "../data/cultureData.ts";
 
 try {
@@ -61,11 +61,36 @@ async function sketchfabModel(id: string, uid: string, opts: { simplify?: number
     // material spec-gloss lama tidak didukung three.js lagi (tekstur hilang, model jadi putih): ubah ke metal-rough dulu
     const metalRough = join(tmp, "mr.glb");
     execFileSync("pnpm", ["dlx", "@gltf-transform/cli", "metalrough", input, metalRough], { stdio: ["ignore", "ignore", "inherit"] });
-    const args = ["dlx", "@gltf-transform/cli", "optimize", metalRough, out, "--compress", "meshopt", "--texture-compress", "webp", "--texture-size", "1024"];
-    if (opts.simplify) args.push("--simplify-ratio", String(opts.simplify));
-    if (opts.join === false) args.push("--join", "false", "--flatten", "false", "--palette", "false");
-    execFileSync("pnpm", args, { stdio: ["ignore", "ignore", "inherit"] });
-    console.log(`model ${id}: ${(statSync(out).size / 1e6).toFixed(1)} MB`);
+    optimize(metalRough, out, opts);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+function optimize(input: string, out: string, opts: { simplify?: number; join?: boolean }) {
+  const args = ["dlx", "@gltf-transform/cli", "optimize", input, out, "--compress", "meshopt", "--texture-compress", "webp", "--texture-size", "1024"];
+  // Batas galat dilonggarkan ke 1% ukuran model: dengan batas bawaan, jahitan UV model fotogrametri/AI menghentikan
+  // penyederhanaan jauh sebelum rasionya tercapai (model sejuta segitiga tetap sejuta).
+  if (opts.simplify) args.push("--simplify-ratio", String(opts.simplify), "--simplify-error", "0.01");
+  if (opts.join === false) args.push("--join", "false", "--flatten", "false", "--palette", "false");
+  execFileSync("pnpm", args, { stdio: ["ignore", "ignore", "inherit"] });
+  console.log(`model ${basename(out, ".glb")}: ${(statSync(out).size / 1e6).toFixed(1)} MB`);
+}
+
+// Model Poly Haven berupa .gltf + .bin + tekstur terpisah: unduh semuanya dengan path aslinya, lalu padatkan jadi .glb.
+async function polyhavenModel(slug: string, simplify?: number) {
+  const out = `public/models/${slug}.glb`;
+  if (existsSync(out)) return;
+  const { gltf } = await (await fetch(`https://api.polyhaven.com/files/${slug}`, { headers: UA })).json();
+  const main: { url: string; include: Record<string, { url: string }> } = gltf["1k"].gltf;
+  const tmp = mkdtempSync(join(tmpdir(), "nusaverse-"));
+  try {
+    for (const [path, file] of Object.entries(main.include)) {
+      mkdirSync(dirname(join(tmp, path)), { recursive: true });
+      await download(file.url, join(tmp, path));
+    }
+    await download(main.url, join(tmp, `${slug}.gltf`));
+    optimize(join(tmp, `${slug}.gltf`), out, { simplify });
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
@@ -99,6 +124,8 @@ async function polyhavenFiles() {
 }
 
 await polyhavenFiles();
+await polyhavenModel(furniture.bench);
+await polyhavenModel(furniture.plant, 0.3);
 for (const p of props) await sketchfabModel(p.id, p.source.uid, { join: false });
 for (const e of provinces.flatMap((p) => p.exhibits)) {
   if (e.source.type === "sketchfab") await sketchfabModel(e.id, e.source.uid, { simplify: e.source.simplify });

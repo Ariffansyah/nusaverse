@@ -2,8 +2,10 @@
 
 import { useEffect } from "react";
 import { saveStamps } from "@/app/actions";
-import { islands, provinces } from "@/data/cultureData";
-import { clearStamps, getStamps, mergeStamps, usePassport } from "@/lib/passport";
+import { islands, kinds, provinces, type Kind } from "@/data/cultureData";
+import { clearProgress, getStamps, mergeStamps, useMissions, usePassport, useSeen } from "@/lib/passport";
+
+const allExhibits = provinces.flatMap((p) => p.exhibits);
 
 // Setelah masuk: cap di akun turun ke perangkat, cap lokal yang belum ada naik ke akun.
 export function PassportSync({ server }: { server: string[] }) {
@@ -38,7 +40,9 @@ export function MapStamps() {
 // onVisit: klik provinsi yang belum ada capnya, game membawa pemain ke peta dengan provinsi itu terpilih.
 export function PassportBook({ onVisit }: { onVisit: (slug: string) => void }) {
   const stamps = usePassport();
-  if (!stamps) return <p className="text-sogan-2">Membuka paspor…</p>;
+  const seen = useSeen();
+  const missions = useMissions();
+  if (!stamps || !seen || !missions) return <p className="text-sogan-2">Membuka paspor…</p>;
 
   // Lencana pulau: semua provinsi di satu pulau sudah punya cap.
   const groups = islands.map((island) => {
@@ -50,11 +54,38 @@ export function PassportBook({ onVisit }: { onVisit: (slug: string) => void }) {
   return (
     <>
       <p className="font-display text-2xl">
-        {stamps.length} dari {provinces.length} provinsi · {badges} dari {islands.length} lencana pulau
+        {stamps.length} dari {provinces.length} cap · {badges} dari {islands.length} lencana pulau · {missions.length} bintang kurator
       </p>
       {stamps.length === 0 && (
-        <p className="mt-2 text-sogan-2">Belum ada cap. Masuk ke salah satu ruang pamer, lalu jawab kuisnya.</p>
+        <p className="mt-2 text-sogan-2">Belum ada cap. Masuk ke salah satu ruang pamer, lalu jawab kuisnya. Selesaikan misi kurator di sana untuk bintang.</p>
       )}
+
+      {/* Album: koleksi yang keterangannya sudah dibuka, per jenis, di seluruh ruang pamer. */}
+      <section className="mt-8">
+        <h3 className="flex items-baseline gap-3 font-display text-xl font-semibold">
+          Album koleksi
+          <span className="font-sans text-sm font-normal text-sogan-2">
+            {seen.length}/{allExhibits.length}
+          </span>
+        </h3>
+        <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {(Object.keys(kinds) as Kind[]).map((kind) => {
+            const list = allExhibits.filter((e) => e.kind === kind);
+            const got = list.filter((e) => seen.includes(e.id)).length;
+            return (
+              <li key={kind} className="rounded-md border-2 border-sogan p-3">
+                <span className="block text-xs font-bold">{kinds[kind]}</span>
+                <span className="font-display text-2xl">
+                  {got}/{list.length}
+                </span>
+                <span className="mt-1 block h-2 overflow-hidden rounded-sm border border-sogan" aria-hidden>
+                  <span className="block h-full bg-bata" style={{ width: `${(got / list.length) * 100}%` }} />
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
       {groups.map(({ island, list, got }) => (
         <section key={island} className="mt-8">
           <h3 className="flex flex-wrap items-center gap-x-3 gap-y-1 font-display text-xl font-semibold">
@@ -67,11 +98,12 @@ export function PassportBook({ onVisit }: { onVisit: (slug: string) => void }) {
             )}
           </h3>
           <ul className="mt-4 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-5">
-            {list.map((p) =>
+            {list.map((p, i) =>
               stamps.includes(p.slug) ? (
-                <li key={p.slug} className="cap aspect-square p-4">
+                <li key={p.slug} className="cap cap-urut aspect-square p-4" style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}>
                   <span className="font-display text-lg leading-tight font-semibold">{p.name}</span>
                   <span className="mt-1 block text-xs">{p.house.name}</span>
+                  {missions.includes(p.slug) && <span className="mt-1 block text-xs font-bold">★ bintang kurator</span>}
                 </li>
               ) : (
                 <li key={p.slug}>
@@ -81,7 +113,7 @@ export function PassportBook({ onVisit }: { onVisit: (slug: string) => void }) {
                     className="grid aspect-square w-full place-content-center rounded-full border-2 border-dashed border-sogan/30 p-4 text-center text-sogan-2 transition-colors hover:border-bata hover:text-bata"
                   >
                     <span className="font-display text-lg leading-tight">{p.name}</span>
-                    <span className="mt-1 text-xs">Kunjungi</span>
+                    <span className="mt-1 text-xs">{missions.includes(p.slug) ? "★ · belum ada cap" : "Kunjungi"}</span>
                   </button>
                 </li>
               ),
@@ -89,13 +121,13 @@ export function PassportBook({ onVisit }: { onVisit: (slug: string) => void }) {
           </ul>
         </section>
       ))}
-      {stamps.length > 0 && (
+      {(stamps.length > 0 || seen.length > 0 || missions.length > 0) && (
         <button
           type="button"
-          onClick={() => confirm("Hapus semua cap di paspor ini?") && clearStamps()}
+          onClick={() => confirm("Hapus semua cap, bintang, dan album di perangkat ini?") && clearProgress()}
           className="tekan mt-10 rounded-md bg-kertas px-4 py-3 text-sm font-bold hover:bg-kunyit"
         >
-          Hapus semua cap
+          Hapus semua progres
         </button>
       )}
     </>

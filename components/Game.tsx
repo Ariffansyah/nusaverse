@@ -4,18 +4,19 @@ import Image from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from "react";
 import { MuseumLoader } from "@/components/MuseumLoader";
 import { MapStamps, PassportBook, StampCount } from "@/components/Passport";
-import { Quiz } from "@/components/Quiz";
+import { GuessGame, Quiz } from "@/components/Quiz";
 import { findProvince, islands, provinces, type Province } from "@/data/cultureData";
-import { usePassport } from "@/lib/passport";
+import { useMissions, usePassport, useSeen } from "@/lib/passport";
 
 type Screen = "menu" | "map" | "museum";
-type PanelId = "jeda" | "info" | "kuis" | "cerita" | "paspor" | "peringkat" | "akun" | "kredit";
+type PanelId = "jeda" | "info" | "kuis" | "tebak" | "cerita" | "paspor" | "peringkat" | "akun" | "kredit";
 type OpenPanel = (id: PanelId) => void;
 
 const panelTitle: Record<PanelId, string> = {
   jeda: "Menu",
   info: "Tentang provinsi",
   kuis: "Kuis",
+  tebak: "Tebak asal",
   cerita: "Cerita warga",
   paspor: "Paspor budaya",
   peringkat: "Peringkat penjelajah",
@@ -65,6 +66,7 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
   const [screen, setScreen] = useState<Screen>("menu");
   const [slug, setSlug] = useState(provinces[0].slug);
   const [panel, setPanel] = useState<PanelId | null>(null);
+  const [sweep, setSweep] = useState(0); // naik tiap pindah layar: memutar ulang sapuan tinta
   const fullscreen = useFullscreen();
   const province = findProvince(slug)!;
 
@@ -100,6 +102,7 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
   const go = (next: Screen) => {
     setPanel(null);
     setScreen(next);
+    setSweep((n) => n + 1);
   };
 
   return (
@@ -124,7 +127,9 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
         <>
           <MuseumLoader
             key={slug}
+            slug={slug}
             name={province.name}
+            island={province.island}
             summary={province.summary}
             exhibits={province.exhibits}
             active={panel === null}
@@ -132,7 +137,7 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
           />
           <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-3">
             {/* kotak narasi kuning ala komik */}
-            <div className="komik rounded-sm bg-kunyit px-3 py-1.5 text-sogan">
+            <div className="komik turun rounded-sm bg-kunyit px-3 py-1.5 text-sogan">
               <p className="text-xs font-bold">Ruang pamer</p>
               <p className="font-display text-2xl leading-tight">{province.name}</p>
             </div>
@@ -151,6 +156,12 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
         </>
       )}
 
+      {sweep > 0 && (
+        <div key={sweep} aria-hidden className="sapuan">
+          <span />
+        </div>
+      )}
+
       {panel && (
         <Panel key={panel} title={panel === "kuis" ? `Kuis ${province.name}` : panelTitle[panel]} onClose={() => setPanel(null)}>
           {panel === "jeda" && (
@@ -162,6 +173,7 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
                 [
                   ["info", "Tentang provinsi"],
                   ["kuis", "Kuis"],
+                  ["tebak", "Tebak asal"],
                   ["cerita", "Cerita warga"],
                   ["paspor", "Paspor budaya"],
                   ["peringkat", "Peringkat"],
@@ -187,6 +199,14 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
           )}
           {panel === "info" && <ProvinceInfo province={province} />}
           {panel === "kuis" && <Quiz slug={province.slug} name={province.name} questions={province.quiz} />}
+          {panel === "tebak" && (
+            <GuessGame
+              onVisit={(s) => {
+                setSlug(s);
+                go("map");
+              }}
+            />
+          )}
           {panel === "cerita" && slots.stories[slug]}
           {panel === "paspor" && (
             <PassportBook
@@ -209,19 +229,22 @@ function MainMenu({ onStart, onPanel }: { onStart: () => void; onPanel: OpenPane
   const item = "flex items-center justify-between gap-3 rounded-md px-5 py-3 text-left text-lg font-medium text-kertas hover:bg-kertas hover:text-sogan";
   return (
     <section className="relative grid h-full items-center">
-      <Image src="/images/foto-kecak.jpg" alt="" fill priority sizes="100vw" className="object-cover opacity-60 contrast-125 saturate-150" />
+      <Image src="/images/foto-kecak.jpg" alt="" fill priority sizes="100vw" className="ken-burns object-cover opacity-60 contrast-125 saturate-150" />
       {/* gelap di sisi teks supaya judul dan menu tetap terbaca di atas foto; titik raster membuat foto terasa dicetak */}
       <div className="absolute inset-0 bg-malam/75 sm:bg-transparent sm:bg-linear-to-r sm:from-malam sm:via-malam/85 sm:to-malam/25" />
       <div className="halftone absolute inset-0" />
       <div className="relative mx-auto w-full max-w-6xl px-6 sm:px-10">
         <p className="komik inline-block -rotate-2 rounded-sm bg-kunyit px-3 py-1 font-bold text-sogan">Museum budaya Nusantara</p>
-        <h1 className="judul-komik mt-3 font-display text-7xl sm:text-9xl">NusaVerse</h1>
+        <h1 className="judul-komik judul-masuk mt-3 font-display text-7xl sm:text-9xl">NusaVerse</h1>
         <p className="mt-4 max-w-md text-lg text-kertas/85">
           Jelajahi {provinces.length} ruang pamer 3D, jawab kuisnya, dan kumpulkan cap paspor budaya.
         </p>
-        <nav aria-label="Menu utama" className="mt-10 flex max-w-xs flex-col gap-1.5" onKeyDown={arrowNav}>
+        <nav aria-label="Menu utama" className="urut mt-10 flex max-w-xs flex-col gap-1.5" onKeyDown={arrowNav}>
           <button type="button" autoFocus onClick={onStart} className={`${bigButton} text-left`}>
             Mulai jelajah
+          </button>
+          <button type="button" onClick={() => onPanel("tebak")} className={item}>
+            Tebak asal
           </button>
           <button type="button" onClick={() => onPanel("paspor")} className={item}>
             Paspor budaya <StampCount />
@@ -245,6 +268,9 @@ function MapScreen(props: { map: ReactNode; slug: string; onPick: (slug: string)
   const { slug, onPick, onEnter } = props;
   const province = findProvince(slug)!;
   const stamps = usePassport();
+  const seen = useSeen();
+  const missions = useMissions();
+  const seenHere = province.exhibits.filter((e) => seen?.includes(e.id)).length;
   // Peta dirender di server; provinsi dikenali dari atribut data-slug pada elemen yang diklik.
   const slugOf = (target: EventTarget) => {
     const s = (target as Element).closest("[data-slug]")?.getAttribute("data-slug");
@@ -278,12 +304,12 @@ function MapScreen(props: { map: ReactNode; slug: string; onPick: (slug: string)
           }}
         >
           <MapStamps />
-          <style>{`.peta [data-slug="${slug}"] path{fill:var(--kertas);stroke:var(--bata);stroke-width:1.5}`}</style>
+          <style>{`.peta [data-slug="${slug}"] path{fill:var(--kertas);stroke:var(--bata);stroke-width:1.5;animation:denyut 1.1s ease-in-out infinite alternate}`}</style>
           {props.map}
         </div>
 
         <aside className="komik rounded-md bg-kertas p-5 text-sogan [--bayang:var(--bata)]">
-          <div className="grid gap-3" aria-label="Daftar ruang pamer">
+          <div className="grid gap-3 lg:max-h-[42vh] lg:overflow-y-auto" aria-label="Daftar ruang pamer">
             {islands.map((island) => (
               <div key={island} role="group" aria-label={island}>
                 <p className="text-xs font-bold text-sogan-2">{island}</p>
@@ -305,11 +331,14 @@ function MapScreen(props: { map: ReactNode; slug: string; onPick: (slug: string)
               </div>
             ))}
           </div>
-          <h2 className="mt-5 font-display text-4xl">{province.name}</h2>
-          <p className="mt-1 text-sm text-sogan-2">
-            {province.exhibits.length} koleksi · {stamps?.includes(slug) ? "cap sudah didapat" : "belum ada cap"}
-          </p>
-          <p className="mt-3 leading-relaxed">{province.summary}</p>
+          <div key={slug} className="ganti">
+            <h2 className="mt-5 font-display text-4xl">{province.name}</h2>
+            <p className="mt-1 text-sm text-sogan-2">
+              {seenHere}/{province.exhibits.length} koleksi dilihat · {missions?.includes(slug) ? "★ misi selesai" : "misi belum selesai"} ·{" "}
+              {stamps?.includes(slug) ? "cap sudah didapat" : "belum ada cap"}
+            </p>
+            <p className="mt-3 leading-relaxed">{province.summary}</p>
+          </div>
           <button type="button" onClick={onEnter} className={`${bigButton} mt-5 w-full`}>
             Masuk ruang pamer
           </button>
@@ -332,7 +361,7 @@ function Panel({ title, onClose, children }: { title: string; onClose: () => voi
       ref={ref}
       onClose={onClose}
       aria-label={title}
-      className="komik m-auto max-h-[92dvh] w-[min(56rem,calc(100%-1.5rem))] overflow-y-auto rounded-md bg-kertas p-0 text-sogan [--bayang:var(--bata)] backdrop:bg-black/70"
+      className="komik panel-buka m-auto max-h-[92dvh] w-[min(56rem,calc(100%-1.5rem))] overflow-y-auto rounded-md bg-kertas p-0 text-sogan [--bayang:var(--bata)] backdrop:bg-black/70"
     >
       <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b-3 border-sogan bg-kunyit px-5 py-2.5">
         <h2 className="font-display text-3xl">{title}</h2>
@@ -346,6 +375,7 @@ function Panel({ title, onClose, children }: { title: string; onClose: () => voi
 }
 
 function ProvinceInfo({ province: p }: { province: Province }) {
+  const food = p.exhibits.filter((e) => e.kind === "kuliner").map((e) => e.title);
   const facts = [
     ["Rumah adat", p.house],
     ["Pakaian adat", p.attire],
@@ -378,6 +408,12 @@ function ProvinceInfo({ province: p }: { province: Province }) {
             )}
           </dd>
         </div>
+        {food.length > 0 && (
+          <div>
+            <dt className="text-sm text-sogan-2">Kuliner di ruang pamer</dt>
+            <dd className="mt-1 leading-relaxed">{food.join(", ")}</dd>
+          </div>
+        )}
       </dl>
       <h3 className="mt-8 font-display text-xl font-semibold">Sejarah singkat</h3>
       <p className="mt-2 leading-relaxed">{p.history}</p>

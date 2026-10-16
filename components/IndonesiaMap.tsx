@@ -31,7 +31,6 @@ export function IndonesiaMap() {
           ["bg-kunyit", "Bisa dijelajahi"],
           ["bg-kertas", "Dipilih"],
           ["bg-bata", "Sudah dapat cap"],
-          ["bg-[#3d342c]", "Segera hadir"],
         ].map(([swatch, label]) => (
           <span key={label} className="flex items-center gap-2">
             <span aria-hidden className={`size-3.5 rounded-sm border border-kertas/60 ${swatch}`} /> {label}
