@@ -194,6 +194,7 @@ export default function Museum(props: {
   const rootRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef(active);
   const relock = useRef(false); // kursor terkunci saat jeda: kunci lagi waktu lanjut
+  const freeing = useRef(false); // kunci dilepas lewat C (mode mouse), bukan Esc: jangan buka menu jeda sampai terkunci lagi
   const aimRef = useRef<number | null>(null);
   const pickRef = useRef<Pick>({ targets: [], hover: null });
   const [aim, setAim] = useState<number | null>(null);
@@ -251,6 +252,13 @@ export default function Museum(props: {
       if (!activeRef.current) return;
       if (key === "e" && !e.repeat) return inspect();
       if (key === "h") return setHint(true);
+      // C: bolak-balik mode lihat (kursor terkunci) dan mode mouse (kursor bebas untuk menekan tombol di layar)
+      if (key === "c" && !e.repeat) {
+        const root = rootRef.current!;
+        freeing.current = document.pointerLockElement === root;
+        if (!freeing.current) return lockPointer(root);
+        return document.exitPointerLock();
+      }
       if (!MOVE_KEYS.has(key)) return;
       e.preventDefault();
       keys.add(key);
@@ -281,8 +289,12 @@ export default function Museum(props: {
     const change = () => {
       const on = document.pointerLockElement === root;
       setLocked(on);
-      if (on) return;
+      if (on) {
+        freeing.current = false;
+        return;
+      }
       s.zoom = false;
+      if (freeing.current) return; // event bisa datang lebih dari sekali atau terlambat: abaikan semua sampai terkunci lagi
       // Esc bawaan browser melepas kunci tanpa event keydown: anggap pemain minta jeda.
       if (activeRef.current) {
         relock.current = true;
@@ -312,7 +324,7 @@ export default function Museum(props: {
     <div
       ref={rootRef}
       role="region"
-      aria-label={`Ruang pamer 3D ${name}. Klik untuk mengunci kursor dan melihat sekeliling dengan mouse. W A S D atau panah untuk berjalan, Shift untuk berlari, E untuk melihat keterangan koleksi di tengah layar, H untuk petunjuk misi kurator.`}
+      aria-label={`Ruang pamer 3D ${name}. Klik untuk mengunci kursor dan melihat sekeliling dengan mouse. W A S D atau panah untuk berjalan, Shift untuk berlari, E untuk melihat keterangan koleksi di tengah layar, H untuk petunjuk misi kurator, C untuk beralih ke kursor bebas dan kembali.`}
       className="relative size-full touch-none overflow-hidden bg-malam select-none"
       onContextMenu={(e) => e.preventDefault()}
       onMouseDown={(e) => {
@@ -324,7 +336,10 @@ export default function Museum(props: {
         const root = e.currentTarget;
         if (document.pointerLockElement === root || (e.target as HTMLElement).tagName !== "CANVAS") return;
         if (e.pointerType === "mouse") {
-          if (e.button === 0) lockPointer(root);
+          if (e.button === 0) {
+            freeing.current = false;
+            lockPointer(root);
+          }
           return;
         }
         // layar sentuh: seret untuk menoleh
@@ -394,7 +409,7 @@ export default function Museum(props: {
       )}
       {active && !loading && !locked && (
         <p className="komik ajak pointer-events-none absolute bottom-20 left-1/2 hidden -translate-x-1/2 rounded-sm bg-kunyit px-4 py-2 font-bold text-sogan pointer-fine:block">
-          Klik untuk melihat sekeliling
+          Klik layar atau tekan C untuk melihat sekeliling
         </p>
       )}
 
@@ -489,7 +504,7 @@ export default function Museum(props: {
       </nav>
 
       <p className="pointer-events-none absolute right-3 bottom-3 hidden max-w-xs rounded-md bg-malam/80 px-3 py-2 text-xs leading-relaxed text-kertas pointer-fine:block">
-        W A S D jalan · Shift lari · E lihat koleksi · H petunjuk misi · tahan klik kanan untuk zoom · I info · K kuis · Esc menu
+        W A S D jalan · Shift lari · E lihat koleksi · H petunjuk misi · C kursor bebas · tahan klik kanan untuk zoom · I info · K kuis · Esc menu
       </p>
 
       <div className="absolute right-3 bottom-3 hidden grid-cols-3 gap-1.5 pointer-coarse:grid" aria-label="Kontrol berjalan">
