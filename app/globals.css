@@ -1,26 +1,95 @@
 @import "tailwindcss";
 
+/* Batik & tanah: krem kertas, cokelat sogan, satu aksen merah bata untuk cap dan aksi utama. Tema terang tetap: identitas brand. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --kertas: #f5ede0;
+  --kertas-2: #ebe0cc;
+  --sogan: #3f2614;
+  --sogan-2: #6b4a33;
+  --sogan-muda: #8a5a35;
+  --pudar: #d6c6ab;
+  --bata: #a23b26;
+  --malam: #1c120b; /* latar layar game: sogan paling gelap, seperti museum saat lampu sorot menyala */
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-kertas: var(--kertas);
+  --color-kertas-2: var(--kertas-2);
+  --color-sogan: var(--sogan);
+  --color-sogan-2: var(--sogan-2);
+  --color-bata: var(--bata);
+  --color-malam: var(--malam);
+  --font-sans: var(--font-jakarta);
+  --font-display: var(--font-fraunces);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--kertas);
+  color: var(--sogan);
+}
+
+:focus-visible {
+  outline: 2px solid var(--bata);
+  outline-offset: 2px;
+}
+/* Di latar gelap game, garis fokus bata kurang kontras: pakai kertas. Panel (dialog) tetap terang, jadi kembali ke bata. */
+.game :focus-visible {
+  outline-color: var(--kertas);
+}
+.game dialog :focus-visible {
+  outline-color: var(--bata);
+}
+
+/* Peta layar pilih ruang (latar gelap): tanpa data redup, bisa dijelajahi tan, dipilih kertas (Game), cap bata (MapStamps). */
+.peta path {
+  fill: #4a3426;
+  stroke: var(--malam);
+  stroke-width: 0.6;
+}
+.peta [data-slug] {
+  cursor: pointer;
+}
+.peta [data-slug] path {
+  fill: #c9a77c;
+  transition: fill 150ms;
+}
+.peta [data-slug]:hover path {
+  fill: var(--kertas);
+}
+.peta [data-slug]:focus-visible {
+  outline: none; /* diganti garis tebal pada path di bawah */
+}
+.peta [data-slug]:focus-visible path {
+  stroke: var(--kertas);
+  stroke-width: 2.5;
+}
+
+/* Cap paspor: motif identitas, dipakai di header, kuis, dan halaman paspor. */
+.cap {
+  display: inline-grid;
+  place-content: center;
+  text-align: center;
+  border: 2px solid var(--bata);
+  border-radius: 9999px;
+  box-shadow:
+    0 0 0 3px var(--kertas),
+    0 0 0 4px var(--bata);
+  color: var(--bata);
+  rotate: -8deg;
+}
+
+/* Jatuhnya cap = umpan balik saat lulus kuis. */
+.cap-baru {
+  animation: cap-jatuh 450ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes cap-jatuh {
+  from {
+    opacity: 0;
+    scale: 1.8;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cap-baru {
+    animation: none;
+  }
 }
