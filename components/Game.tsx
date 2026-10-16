@@ -26,8 +26,10 @@ const panelTitle: Record<PanelId, string> = {
 // Pintasan keyboard di ruang pamer; berguna saat kursor terkunci dan tombol HUD tidak bisa diklik.
 const museumKeys: Record<string, PanelId> = { escape: "jeda", m: "jeda", i: "info", k: "kuis", p: "paspor" };
 
-const hudButton = "flex items-center gap-2 rounded-md bg-malam/80 px-3 py-2.5 text-sm font-medium text-kertas hover:bg-malam";
-const bigButton = "rounded-md bg-bata px-5 py-3.5 text-lg font-medium text-white hover:bg-sogan";
+// Tombol HUD: kertas bergaris tinta, terbaca di atas adegan 3D. Tombol utama: merah dengan bayangan kunyit, satu-satunya aksi besar per layar.
+const hudButton = "tekan flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md bg-kertas px-3 py-2 text-sm font-bold text-sogan hover:bg-kunyit";
+const bigButton = "tekan rounded-md bg-bata px-5 py-3 font-display text-2xl text-white [--bayang:var(--kunyit)] hover:bg-sogan";
+const menuItem = "rounded-md px-4 py-3 text-left text-lg font-medium hover:bg-kunyit";
 
 // Panah atas/bawah memindah fokus antar tombol menu, seperti menu game.
 function arrowNav(e: KeyboardEvent<HTMLElement>) {
@@ -129,9 +131,10 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
             onPause={() => setPanel((open) => open ?? "jeda")}
           />
           <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-3">
-            <div className="rounded-lg bg-malam/80 px-3 py-2">
-              <p className="text-xs text-kertas/70">Ruang pamer</p>
-              <p className="font-display text-lg leading-tight font-semibold">{province.name}</p>
+            {/* kotak narasi kuning ala komik */}
+            <div className="komik rounded-sm bg-kunyit px-3 py-1.5 text-sogan">
+              <p className="text-xs font-bold">Ruang pamer</p>
+              <p className="font-display text-2xl leading-tight">{province.name}</p>
             </div>
             <div className="pointer-events-auto flex gap-1.5">
               <button type="button" onClick={() => setPanel("info")} className={hudButton}>
@@ -152,7 +155,7 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
         <Panel key={panel} title={panel === "kuis" ? `Kuis ${province.name}` : panelTitle[panel]} onClose={() => setPanel(null)}>
           {panel === "jeda" && (
             <nav aria-label="Menu jeda" className="grid gap-1 sm:grid-cols-2" onKeyDown={arrowNav}>
-              <button type="button" data-autofocus onClick={() => setPanel(null)} className="rounded-md bg-bata px-4 py-3 text-left text-lg font-medium text-white hover:bg-sogan">
+              <button type="button" data-autofocus onClick={() => setPanel(null)} className="tekan rounded-md bg-bata px-4 py-3 text-left font-display text-2xl text-white hover:bg-sogan">
                 Lanjutkan
               </button>
               {(
@@ -165,19 +168,19 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
                   ["akun", "Akun"],
                 ] as const
               ).map(([id, label]) => (
-                <button key={id} type="button" onClick={() => setPanel(id)} className="rounded-md px-4 py-3 text-left text-lg hover:bg-kertas-2">
+                <button key={id} type="button" onClick={() => setPanel(id)} className={menuItem}>
                   {label}
                 </button>
               ))}
               {fullscreen.supported && (
-                <button type="button" onClick={fullscreen.toggle} className="rounded-md px-4 py-3 text-left text-lg hover:bg-kertas-2">
+                <button type="button" onClick={fullscreen.toggle} className={menuItem}>
                   {fullscreen.on ? "Keluar layar penuh" : "Layar penuh"}
                 </button>
               )}
-              <button type="button" onClick={() => go("map")} className="rounded-md px-4 py-3 text-left text-lg hover:bg-kertas-2">
+              <button type="button" onClick={() => go("map")} className={menuItem}>
                 Pilih ruang lain
               </button>
-              <button type="button" onClick={() => go("menu")} className="rounded-md px-4 py-3 text-left text-lg hover:bg-kertas-2">
+              <button type="button" onClick={() => go("menu")} className={menuItem}>
                 Menu utama
               </button>
             </nav>
@@ -203,15 +206,16 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
 }
 
 function MainMenu({ onStart, onPanel }: { onStart: () => void; onPanel: OpenPanel }) {
-  const item = "flex items-center justify-between gap-3 rounded-md px-5 py-3 text-left text-lg text-kertas hover:bg-kertas/10";
+  const item = "flex items-center justify-between gap-3 rounded-md px-5 py-3 text-left text-lg font-medium text-kertas hover:bg-kertas hover:text-sogan";
   return (
     <section className="relative grid h-full items-center">
-      <Image src="/images/foto-kecak.jpg" alt="" fill priority sizes="100vw" className="object-cover opacity-60" />
-      {/* gelap di sisi teks supaya judul dan menu tetap terbaca di atas foto */}
+      <Image src="/images/foto-kecak.jpg" alt="" fill priority sizes="100vw" className="object-cover opacity-60 contrast-125 saturate-150" />
+      {/* gelap di sisi teks supaya judul dan menu tetap terbaca di atas foto; titik raster membuat foto terasa dicetak */}
       <div className="absolute inset-0 bg-malam/75 sm:bg-transparent sm:bg-linear-to-r sm:from-malam sm:via-malam/85 sm:to-malam/25" />
+      <div className="halftone absolute inset-0" />
       <div className="relative mx-auto w-full max-w-6xl px-6 sm:px-10">
-        <p className="text-kertas/75">Museum budaya Nusantara</p>
-        <h1 className="mt-1 font-display text-6xl font-semibold sm:text-8xl">NusaVerse</h1>
+        <p className="komik inline-block -rotate-2 rounded-sm bg-kunyit px-3 py-1 font-bold text-sogan">Museum budaya Nusantara</p>
+        <h1 className="judul-komik mt-3 font-display text-7xl sm:text-9xl">NusaVerse</h1>
         <p className="mt-4 max-w-md text-lg text-kertas/85">
           Jelajahi {provinces.length} ruang pamer 3D, jawab kuisnya, dan kumpulkan cap paspor budaya.
         </p>
@@ -248,13 +252,13 @@ function MapScreen(props: { map: ReactNode; slug: string; onPick: (slug: string)
   };
 
   return (
-    <section className="flex h-full flex-col">
+    <section className="halftone flex h-full flex-col">
       <header className="flex items-center justify-between gap-3 px-3 py-3 sm:px-6">
-        <button type="button" onClick={props.onBack} className={hudButton} aria-label="Kembali ke menu utama">
+        <button type="button" onClick={props.onBack} className={`${hudButton} [--bayang:var(--bata)]`} aria-label="Kembali ke menu utama">
           ← Menu
         </button>
-        <h1 className="font-display text-xl font-semibold sm:text-2xl">Pilih ruang pamer</h1>
-        <button type="button" onClick={() => props.onPanel("paspor")} className={hudButton}>
+        <h1 className="judul-komik text-center font-display text-2xl sm:text-4xl">Pilih ruang pamer</h1>
+        <button type="button" onClick={() => props.onPanel("paspor")} className={`${hudButton} [--bayang:var(--bata)]`}>
           Paspor <StampCount />
         </button>
       </header>
@@ -278,11 +282,11 @@ function MapScreen(props: { map: ReactNode; slug: string; onPick: (slug: string)
           {props.map}
         </div>
 
-        <aside className="rounded-xl bg-kertas p-5 text-sogan">
+        <aside className="komik rounded-md bg-kertas p-5 text-sogan [--bayang:var(--bata)]">
           <div className="grid gap-3" aria-label="Daftar ruang pamer">
             {islands.map((island) => (
               <div key={island} role="group" aria-label={island}>
-                <p className="text-xs text-sogan-2">{island}</p>
+                <p className="text-xs font-bold text-sogan-2">{island}</p>
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   {provinces
                     .filter((p) => p.island === island)
@@ -292,7 +296,7 @@ function MapScreen(props: { map: ReactNode; slug: string; onPick: (slug: string)
                         type="button"
                         aria-pressed={p.slug === slug}
                         onClick={() => onPick(p.slug)}
-                        className={`rounded-md px-3 py-2.5 text-sm font-medium ${p.slug === slug ? "bg-sogan text-kertas" : "bg-kertas-2 hover:text-bata"}`}
+                        className={`rounded-md border-2 border-sogan px-3 py-2 text-sm font-bold ${p.slug === slug ? "bg-sogan text-kunyit" : "bg-kertas hover:bg-kunyit"}`}
                       >
                         {p.name}
                       </button>
@@ -301,7 +305,7 @@ function MapScreen(props: { map: ReactNode; slug: string; onPick: (slug: string)
               </div>
             ))}
           </div>
-          <h2 className="mt-5 font-display text-3xl font-semibold">{province.name}</h2>
+          <h2 className="mt-5 font-display text-4xl">{province.name}</h2>
           <p className="mt-1 text-sm text-sogan-2">
             {province.exhibits.length} koleksi · {stamps?.includes(slug) ? "cap sudah didapat" : "belum ada cap"}
           </p>
@@ -328,11 +332,11 @@ function Panel({ title, onClose, children }: { title: string; onClose: () => voi
       ref={ref}
       onClose={onClose}
       aria-label={title}
-      className="m-auto max-h-[92dvh] w-[min(56rem,calc(100%-1.5rem))] overflow-y-auto rounded-xl bg-kertas p-0 text-sogan backdrop:bg-black/70"
+      className="komik m-auto max-h-[92dvh] w-[min(56rem,calc(100%-1.5rem))] overflow-y-auto rounded-md bg-kertas p-0 text-sogan [--bayang:var(--bata)] backdrop:bg-black/70"
     >
-      <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-sogan/10 bg-kertas px-5 py-3">
-        <h2 className="font-display text-2xl font-semibold">{title}</h2>
-        <button type="button" onClick={() => ref.current?.close()} className="rounded-md px-3 py-2.5 text-sm font-medium hover:bg-kertas-2">
+      <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b-3 border-sogan bg-kunyit px-5 py-2.5">
+        <h2 className="font-display text-3xl">{title}</h2>
+        <button type="button" onClick={() => ref.current?.close()} className="tekan rounded-md bg-kertas px-3 py-2 text-sm font-bold hover:bg-kertas-2">
           Tutup
         </button>
       </div>

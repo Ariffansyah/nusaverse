@@ -28,13 +28,13 @@ export function IndonesiaMap() {
       </svg>
       <div className="mt-3 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-kertas/80">
         {[
-          ["bg-[#c9a77c]", "Bisa dijelajahi"],
+          ["bg-kunyit", "Bisa dijelajahi"],
           ["bg-kertas", "Dipilih"],
           ["bg-bata", "Sudah dapat cap"],
-          ["bg-[#4a3426]", "Segera hadir"],
+          ["bg-[#3d342c]", "Segera hadir"],
         ].map(([swatch, label]) => (
           <span key={label} className="flex items-center gap-2">
-            <span aria-hidden className={`size-3 rounded-sm ${swatch}`} /> {label}
+            <span aria-hidden className={`size-3.5 rounded-sm border border-kertas/60 ${swatch}`} /> {label}
           </span>
         ))}
       </div>

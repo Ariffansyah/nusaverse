@@ -93,7 +93,7 @@ export function PassportBook({ onVisit }: { onVisit: (slug: string) => void }) {
         <button
           type="button"
           onClick={() => confirm("Hapus semua cap di paspor ini?") && clearStamps()}
-          className="mt-10 rounded-md border border-sogan/30 px-4 py-3 text-sm font-medium hover:border-bata hover:text-bata"
+          className="tekan mt-10 rounded-md bg-kertas px-4 py-3 text-sm font-bold hover:bg-kunyit"
         >
           Hapus semua cap
         </button>

@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
+import { Bangers, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-// Fraunces: serif bergaya cetak lama, rasa label museum. Plus Jakarta Sans: karya foundry Indonesia (Tokotype).
-const display = Fraunces({ variable: "--font-fraunces", subsets: ["latin"] });
+// Bangers: huruf lettering komik untuk judul dan papan. Plus Jakarta Sans (foundry Indonesia, Tokotype) tetap untuk teks panjang supaya mudah dibaca.
+const display = Bangers({ variable: "--font-bangers", weight: "400", subsets: ["latin"] });
 const sans = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description: "Game museum budaya Indonesia di browser: pilih ruang pamer di peta, jelajahi koleksinya dalam 3D, dan kumpulkan cap paspor budaya.",
 };
 
-export const viewport: Viewport = { themeColor: "#1c120b" };
+export const viewport: Viewport = { themeColor: "#17120e" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

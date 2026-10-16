@@ -34,17 +34,17 @@ export function Quiz({ slug, name, questions }: { slug: string; name: string; qu
       <form key={round} onSubmit={submit} className="mt-4 space-y-6">
         {questions.map((q, i) => (
           <fieldset key={q.q} disabled={!!answers}>
-            <legend className="font-medium">
+            <legend className="font-bold">
               {i + 1}. {q.q}
             </legend>
-            <div className="mt-2 divide-y divide-sogan/10 rounded-lg bg-kertas-2">
+            <div className="mt-2 divide-y-2 divide-sogan overflow-hidden rounded-md border-2 border-sogan bg-kertas">
               {q.options.map((opt, j) => {
                 const isAnswer = answers && j === q.answer;
                 const wrongPick = answers && answers[i] === j && j !== q.answer;
                 return (
                   <label
                     key={opt}
-                    className={`flex cursor-pointer items-center gap-3 px-3 py-3 text-sm has-disabled:cursor-default ${isAnswer ? "font-semibold text-bata" : ""} ${wrongPick ? "line-through" : ""}`}
+                    className={`flex cursor-pointer items-center gap-3 px-3 py-3 text-sm has-checked:bg-kunyit has-disabled:cursor-default ${isAnswer ? "font-semibold text-bata" : ""} ${wrongPick ? "line-through" : ""}`}
                   >
                     <input type="radio" name={`q${i}`} value={j} required className="size-4 accent-bata" />
                     {opt}
@@ -57,7 +57,7 @@ export function Quiz({ slug, name, questions }: { slug: string; name: string; qu
         ))}
 
         {!answers && (
-          <button type="submit" className="w-full rounded-md bg-bata px-4 py-3 font-medium text-white hover:bg-sogan">
+          <button type="submit" className="tekan w-full rounded-md bg-bata px-4 py-2.5 font-display text-2xl text-white hover:bg-sogan">
             Periksa jawaban
           </button>
         )}
@@ -86,7 +86,7 @@ export function Quiz({ slug, name, questions }: { slug: string; name: string; qu
               setAnswers(null);
               setRound((r) => r + 1);
             }}
-            className="mt-4 rounded-md border border-sogan/30 px-4 py-3 text-sm font-medium hover:border-bata hover:text-bata"
+            className="tekan mt-4 rounded-md bg-kertas px-4 py-3 text-sm font-bold hover:bg-kunyit"
           >
             Ulangi kuis
           </button>

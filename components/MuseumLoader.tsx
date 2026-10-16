@@ -13,7 +13,7 @@ const Museum = dynamic(() => import("@/components/Museum"), {
 const MuseumBoundary = catchError((_: object, { reset }: ErrorInfo) => (
   <div role="alert" className="grid size-full place-content-center gap-4 bg-malam p-6 text-center text-kertas">
     <p>Ruang pamer 3D gagal dimuat. Browser ini mungkin tidak mendukung WebGL.</p>
-    <button type="button" onClick={reset} className="mx-auto rounded-md bg-bata px-4 py-3 text-sm font-medium text-white hover:bg-sogan">
+    <button type="button" onClick={reset} className="tekan mx-auto rounded-md bg-bata px-4 py-3 text-sm font-bold text-white [--bayang:var(--kunyit)] hover:bg-sogan">
       Coba muat lagi
     </button>
   </div>

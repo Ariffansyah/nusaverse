@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
-/* Batik & tanah: krem kertas, cokelat sogan, satu aksen merah bata untuk cap dan aksi utama. Tema terang tetap: identitas brand. */
+/* Pop komik: kertas krem, tinta hitam, merah cabai untuk aksi utama dan cap, kuning kunyit untuk sorotan (kotak narasi, peta).
+   Nama token lama dipertahankan supaya kelas di semua komponen ikut berganti. Tema terang tetap: identitas brand. */
 :root {
-  --kertas: #f5ede0;
-  --kertas-2: #ebe0cc;
-  --sogan: #3f2614;
-  --sogan-2: #6b4a33;
-  --sogan-muda: #8a5a35;
-  --pudar: #d6c6ab;
-  --bata: #a23b26;
-  --malam: #1c120b; /* latar layar game: sogan paling gelap, seperti museum saat lampu sorot menyala */
+  --kertas: #fff4dc;
+  --kertas-2: #ffe6a3;
+  --sogan: #17120e; /* tinta */
+  --sogan-2: #4f4339;
+  --bata: #c8241b; /* merah cabai; lolos AA di kertas dan kertas-2 */
+  --kunyit: #ffc928;
+  --malam: #17120e; /* latar layar game: halaman komik bertinta */
 }
 
 @theme inline {
@@ -18,9 +18,82 @@
   --color-sogan: var(--sogan);
   --color-sogan-2: var(--sogan-2);
   --color-bata: var(--bata);
+  --color-kunyit: var(--kunyit);
   --color-malam: var(--malam);
   --font-sans: var(--font-jakarta);
-  --font-display: var(--font-fraunces);
+  --font-display: var(--font-bangers);
+}
+
+/* Bangers hanya punya satu ketebalan: jangan biarkan browser memalsukan tebal dari kelas font-semibold. */
+.font-display {
+  font-synthesis: none;
+  letter-spacing: 0.03em;
+}
+
+/* Motif identitas: panel komik bergaris tinta dengan bayangan cetak bergeser.
+   --bayang tidak diwariskan, jadi [--bayang:var(--bata)] di panel berlatar gelap tidak menular ke tombol di dalamnya. */
+@property --bayang {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: #17120e;
+}
+@utility komik {
+  border: 3px solid var(--sogan);
+  box-shadow: 5px 5px 0 var(--bayang);
+}
+/* Tombol komik: terangkat saat disorot, tertekan ke kertas saat diklik. */
+@utility tekan {
+  border: 2.5px solid var(--sogan);
+  box-shadow: 3px 3px 0 var(--bayang);
+  transition:
+    translate 90ms,
+    box-shadow 90ms,
+    background-color 90ms;
+  &:hover {
+    translate: -1px -1px;
+    box-shadow: 4px 4px 0 var(--bayang);
+  }
+  &:active {
+    translate: 3px 3px;
+    box-shadow: 0 0 0 var(--bayang);
+  }
+}
+/* Titik raster cetakan komik di latar gelap; sama dengan halftone yang digambar shader di ruang pamer 3D. */
+@utility halftone {
+  background-image: radial-gradient(rgb(255 244 220 / 0.09) 1.4px, transparent 1.9px);
+  background-size: 10px 10px;
+}
+/* Judul ala sampul komik: huruf kunyit bergaris tinta dengan bayangan merah. */
+@utility judul-komik {
+  color: var(--kunyit);
+  -webkit-text-stroke: 0.06em var(--sogan);
+  paint-order: stroke fill;
+  text-shadow: 0.05em 0.05em 0 var(--bata);
+}
+/* Balon kata dengan ekor ke atas (menunjuk crosshair). */
+@utility balon {
+  border: 2.5px solid var(--sogan);
+  border-radius: 1rem;
+  &::before {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    translate: -50% 0;
+    border: 9px solid transparent;
+    border-bottom-color: var(--sogan);
+    border-top: 0;
+  }
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: calc(100% - 3.5px);
+    left: 50%;
+    translate: -50% 0;
+    border: 6px solid transparent;
+    border-bottom-color: var(--kertas);
+    border-top: 0;
+  }
 }
 
 body {
@@ -40,9 +113,9 @@ body {
   outline-color: var(--bata);
 }
 
-/* Peta layar pilih ruang (latar gelap): tanpa data redup, bisa dijelajahi tan, dipilih kertas (Game), cap bata (MapStamps). */
+/* Peta layar pilih ruang (latar gelap): tanpa data redup, bisa dijelajahi kunyit, dipilih kertas (Game), cap bata (MapStamps). */
 .peta path {
-  fill: #4a3426;
+  fill: #3d342c;
   stroke: var(--malam);
   stroke-width: 0.6;
 }
@@ -50,7 +123,7 @@ body {
   cursor: pointer;
 }
 .peta [data-slug] path {
-  fill: #c9a77c;
+  fill: var(--kunyit);
   transition: fill 150ms;
 }
 .peta [data-slug]:hover path {
@@ -91,5 +164,8 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .cap-baru {
     animation: none;
+  }
+  .tekan {
+    transition: none;
   }
 }

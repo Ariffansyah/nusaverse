@@ -4,6 +4,7 @@ import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Center, ContactShadows, Environment, useGLTF, useProgress, useTexture } from "@react-three/drei";
 import { Component, Suspense, useEffect, useEffectEvent, useMemo, useRef, useState, type ReactNode } from "react";
 import { Box3, CanvasTexture, Group, Object3D, PlaneGeometry, RepeatWrapping, Vector3, type Mesh, type PerspectiveCamera } from "three";
+import { ComicPass } from "@/components/ComicPass";
 import { polyhaven } from "@/data/assets";
 import type { Exhibit } from "@/data/cultureData";
 
@@ -211,12 +212,12 @@ export default function Museum(props: { name: string; summary: string; exhibits:
       }}
       onPointerUp={() => (input.current.drag = null)}
     >
-      <Canvas dpr={[1, 1.75]} camera={{ fov: 60, near: 0.1, far: 120, position: [0, EYE, length / 2 - 2.5] }}>
+      <Canvas dpr={[1, 1.75]} gl={{ antialias: false }} camera={{ fov: 60, near: 0.1, far: 120, position: [0, EYE, length / 2 - 2.5] }}>
         <Suspense fallback={null}>
           <Hall name={name} length={length} />
-          <Environment files={`/hdr/${polyhaven.hdri}.hdr`} environmentIntensity={0.45} />
+          <Environment files={`/hdr/${polyhaven.hdri}.hdr`} environmentIntensity={0.7} />
         </Suspense>
-        <hemisphereLight args={["#fff4e0", "#5a3b26", 0.5]} />
+        <hemisphereLight args={["#ffffff", "#9a8774", 1.2]} />
         {spots.map((s) => (
           <Suspense key={s.exhibit.id} fallback={null}>
             <ExhibitView spot={s} onSelect={visit} />
@@ -231,6 +232,7 @@ export default function Museum(props: { name: string; summary: string; exhibits:
             setAim(i);
           }}
         />
+        <ComicPass />
       </Canvas>
 
       {locked && (
@@ -240,13 +242,13 @@ export default function Museum(props: { name: string; summary: string; exhibits:
         />
       )}
       {active && !loading && aim !== null && (
-        <p className="pointer-events-none absolute top-1/2 left-1/2 mt-8 hidden -translate-x-1/2 rounded-md bg-malam/80 px-3 py-1.5 text-sm whitespace-nowrap text-kertas pointer-fine:block">
-          <kbd className="rounded border border-kertas/40 px-1.5 font-sans text-xs">E</kbd>
+        <p className="balon pointer-events-none absolute top-1/2 left-1/2 mt-8 hidden -translate-x-1/2 bg-kertas px-3 py-1.5 text-sm font-bold whitespace-nowrap text-sogan pointer-fine:block">
+          <kbd className="rounded border-2 border-sogan px-1.5 font-sans text-xs">E</kbd>
           {locked && " / klik"} · {spots[aim].exhibit.title}
         </p>
       )}
       {active && !loading && !locked && (
-        <p className="pointer-events-none absolute bottom-20 left-1/2 hidden -translate-x-1/2 rounded-md bg-malam/80 px-4 py-2.5 text-kertas pointer-fine:block">
+        <p className="komik pointer-events-none absolute bottom-20 left-1/2 hidden -translate-x-1/2 rounded-sm bg-kunyit px-4 py-2 font-bold text-sogan pointer-fine:block">
           Klik untuk melihat sekeliling
         </p>
       )}
@@ -254,11 +256,11 @@ export default function Museum(props: { name: string; summary: string; exhibits:
       {shown && (
         <section
           aria-live="polite"
-          className="absolute inset-x-3 top-20 max-h-[40%] overflow-y-auto rounded-lg bg-kertas/95 p-4 text-sogan shadow-lg sm:inset-x-auto sm:left-3 sm:max-h-[50%] sm:w-96"
+          className="komik absolute inset-x-3 top-24 max-h-[40%] overflow-y-auto rounded-md bg-kertas p-4 text-sogan sm:inset-x-auto sm:left-3 sm:max-h-[50%] sm:w-96"
         >
           <div className="flex items-start justify-between gap-3">
-            <h2 className="font-display text-xl font-semibold">{shown.title}</h2>
-            <button type="button" onClick={() => setSelected(null)} className="-mt-1 -mr-2 rounded-md px-3 py-2 text-sm hover:bg-kertas-2" aria-label="Tutup keterangan">
+            <h2 className="font-display text-2xl">{shown.title}</h2>
+            <button type="button" onClick={() => setSelected(null)} className="tekan -mt-1 rounded-md bg-kertas px-3 py-1.5 text-sm font-bold hover:bg-kunyit" aria-label="Tutup keterangan">
               Tutup
             </button>
           </div>
@@ -274,18 +276,18 @@ export default function Museum(props: { name: string; summary: string; exhibits:
       )}
 
       {/* Navigasi koleksi ala game: sebelumnya / berikutnya, kamera berjalan sendiri ke koleksi itu */}
-      <nav aria-label="Tur koleksi" className="absolute bottom-3 left-3 flex max-w-[calc(100%-12rem)] items-center gap-1 rounded-lg bg-malam/80 p-1 text-kertas sm:max-w-md">
-        <button type="button" onClick={() => step(-1)} aria-label="Koleksi sebelumnya" className="size-11 shrink-0 rounded-md hover:bg-kertas/15">
+      <nav aria-label="Tur koleksi" className="komik absolute bottom-3 left-3 flex max-w-[calc(100%-12rem)] items-center gap-1 rounded-md bg-kertas p-1 text-sogan sm:max-w-md">
+        <button type="button" onClick={() => step(-1)} aria-label="Koleksi sebelumnya" className="size-11 shrink-0 rounded-sm hover:bg-kunyit">
           ◀
         </button>
-        <p className="min-w-0 flex-1 truncate px-1 text-sm" aria-live="polite">
+        <p className="min-w-0 flex-1 truncate px-1 text-sm font-bold" aria-live="polite">
           {shown
             ? `${selected! + 1}/${spots.length} · ${shown.title}`
             : allSeen
               ? "Semua koleksi sudah dilihat. Saatnya kuis!"
               : `${seen.size}/${spots.length} koleksi dilihat`}
         </p>
-        <button type="button" onClick={() => step(1)} aria-label="Koleksi berikutnya" className="size-11 shrink-0 rounded-md hover:bg-kertas/15">
+        <button type="button" onClick={() => step(1)} aria-label="Koleksi berikutnya" className="size-11 shrink-0 rounded-sm hover:bg-kunyit">
           ▶
         </button>
       </nav>
@@ -312,11 +314,11 @@ export default function Museum(props: { name: string; summary: string; exhibits:
       </div>
 
       {loading && (
-        <div role="status" className="absolute inset-0 grid place-items-center bg-malam px-6 text-center text-kertas">
+        <div role="status" className="halftone absolute inset-0 grid place-items-center bg-malam px-6 text-center text-kertas">
           <div className="max-w-md">
-            <p className="text-sm text-kertas/70">Memasuki ruang pamer</p>
-            <p className="mt-1 font-display text-4xl font-semibold">{name}</p>
-            <div className="mt-6 h-1.5 overflow-hidden rounded-full bg-kertas/15">
+            <p className="text-sm font-bold text-kertas/80">Memasuki ruang pamer</p>
+            <p className="judul-komik mt-1 font-display text-6xl">{name}</p>
+            <div className="mt-6 h-4 overflow-hidden rounded-sm border-2 border-kertas">
               <div className="h-full bg-bata transition-[width]" style={{ width: `${progress}%` }} />
             </div>
             <p className="mt-2 text-sm text-kertas/70">Memuat koleksi… {Math.round(progress)}%</p>
@@ -339,7 +341,7 @@ function MoveButton({ inputRef, moveKey, label, children }: { inputRef: React.Re
       onPointerUp={release}
       onPointerLeave={release}
       onPointerCancel={release}
-      className="size-12 rounded-md bg-kertas/90 text-lg active:bg-kertas-2"
+      className="size-12 rounded-md border-2 border-sogan bg-kertas text-lg text-sogan active:bg-kunyit"
     >
       {children}
     </button>
@@ -440,8 +442,9 @@ function tiledPlane(w: number, h: number, tile = 3) {
 
 function Hall({ name, length }: { name: string; length: number }) {
   const t = polyhaven;
-  const [floor, floorNormal, floorRough, wall, wallNormal] = useTexture(
-    [`/textures/${t.floor}_diff.jpg`, `/textures/${t.floor}_nor.jpg`, `/textures/${t.floor}_rough.jpg`, `/textures/${t.wall}_diff.jpg`, `/textures/${t.wall}_nor.jpg`],
+  // hanya warna dasar: normal/roughness map membuat kilap dan bintik yang jadi belang setelah filter komik
+  const [floor, wall] = useTexture(
+    [`/textures/${t.floor}_diff.jpg`, `/textures/${t.wall}_diff.jpg`],
     (loaded) => loaded.forEach((tex) => (tex.wrapS = tex.wrapT = RepeatWrapping)),
   );
   const geo = useMemo(() => ({ floor: tiledPlane(W, length), side: tiledPlane(length, H), end: tiledPlane(W, H) }), [length]);
@@ -456,11 +459,11 @@ function Hall({ name, length }: { name: string; length: number }) {
   return (
     <group>
       <mesh rotation-x={-Math.PI / 2} geometry={geo.floor}>
-        <meshStandardMaterial map={floor} normalMap={floorNormal} roughnessMap={floorRough} />
+        <meshStandardMaterial map={floor} roughness={0.9} />
       </mesh>
       {walls.map((w, i) => (
         <mesh key={i} position={w.pos} rotation-y={w.rot} geometry={w.geo}>
-          <meshStandardMaterial map={wall} normalMap={wallNormal} color="#f1e4cf" />
+          <meshStandardMaterial map={wall} color="#ffffff" />
         </mesh>
       ))}
       <mesh position-y={H} rotation-x={Math.PI / 2}>
@@ -471,7 +474,7 @@ function Hall({ name, length }: { name: string; length: number }) {
       {walls.map((w, i) => (
         <mesh key={`list-${i}`} position={[w.pos[0], 0.1, w.pos[2]]} rotation-y={w.rot}>
           <boxGeometry args={[w.width, 0.2, 0.06]} />
-          <meshStandardMaterial color="#3f2614" />
+          <meshStandardMaterial color="#17120e" />
         </mesh>
       ))}
       <Plaque title={`Ruang Pamer ${name}`} position={[0, 6.1, -length / 2 + 0.03]} width={7} height={1.1} titleOnly />
@@ -636,7 +639,7 @@ function SpotLamp({ y, from }: { y: number; from: number }) {
   return (
     <>
       <primitive object={target} position={[0, y, 0]} />
-      <spotLight position={[0, H - 0.3, from]} target={target} angle={0.55} penumbra={0.7} intensity={45} decay={1.6} distance={14} color="#ffe2b8" />
+      <spotLight position={[0, H - 0.3, from]} target={target} angle={0.55} penumbra={0.7} intensity={45} decay={1.6} distance={14} color="#fff3dc" />
       <mesh position={[0, H - 0.05, from]}>
         <cylinderGeometry args={[0.16, 0.16, 0.08, 20]} />
         <meshBasicMaterial color="#fff1d6" />
@@ -663,19 +666,23 @@ function Plaque(props: {
     canvas.height = 512;
     const g = canvas.getContext("2d")!;
     const css = getComputedStyle(document.documentElement);
-    const display = css.getPropertyValue("--font-fraunces") || "serif";
+    const display = css.getPropertyValue("--font-bangers") || "sans-serif";
     const sans = css.getPropertyValue("--font-jakarta") || "sans-serif";
-    g.fillStyle = titleOnly ? "#2b1d14" : "#f5ede0";
+    // judul ruangan: kotak narasi kunyit; keterangan: kertas. Keduanya bergaris tinta seperti panel komik.
+    g.fillStyle = titleOnly ? "#ffc928" : "#fff4dc";
     g.fillRect(0, 0, canvas.width, canvas.height);
-    g.fillStyle = titleOnly ? "#f5ede0" : "#3f2614";
+    g.lineWidth = 28;
+    g.strokeStyle = "#17120e";
+    g.strokeRect(0, 0, canvas.width, canvas.height);
+    g.fillStyle = "#17120e";
     if (titleOnly) {
-      g.font = `600 260px ${display}`;
+      g.font = `300px ${display}`;
       g.textAlign = "center";
       g.textBaseline = "middle";
       g.fillText(title, canvas.width / 2, 270, canvas.width - 80);
     } else {
       const pad = 44;
-      g.font = `600 76px ${display}`;
+      g.font = `86px ${display}`;
       g.fillText(title, pad, 110, canvas.width - pad * 2);
       g.font = `38px ${sans}`;
       wrapText(g, body, pad, 185, canvas.width - pad * 2, 52);

@@ -4,8 +4,8 @@ import { useActionState, useState } from "react";
 import { signIn, signOut, signUp, submitStory, updateName, type FormState } from "@/app/actions";
 import { clearStamps } from "@/lib/passport";
 
-const input = "w-full rounded-md border border-sogan/25 bg-white/60 px-3 py-3 focus:border-bata";
-const button = "rounded-md bg-bata px-5 py-3 font-medium text-white hover:bg-sogan disabled:opacity-60";
+const input = "w-full rounded-md border-2 border-sogan bg-white px-3 py-3 focus:border-bata";
+const button = "tekan rounded-md bg-bata px-5 py-3 font-bold text-white hover:bg-sogan disabled:opacity-60";
 
 function Feedback({ state }: { state: FormState }) {
   if (!state) return null;
@@ -25,14 +25,14 @@ export function AuthForms() {
 
   return (
     <div className="max-w-md">
-      <div className="flex gap-1 rounded-lg bg-kertas-2 p-1">
+      <div className="flex gap-1 rounded-md border-2 border-sogan bg-kertas-2 p-1">
         {(["masuk", "daftar"] as const).map((m) => (
           <button
             key={m}
             type="button"
             aria-pressed={mode === m}
             onClick={() => setMode(m)}
-            className={`flex-1 rounded-md px-4 py-3 text-sm font-medium ${mode === m ? "bg-kertas shadow-sm" : "text-sogan-2"}`}
+            className={`flex-1 rounded-md px-4 py-3 text-sm font-medium ${mode === m ? "bg-sogan text-kertas" : "text-sogan-2"}`}
           >
             {m === "masuk" ? "Masuk" : "Daftar akun baru"}
           </button>
@@ -114,7 +114,7 @@ export function StoryForm({ province }: { province: string }) {
 export function LogoutButton() {
   return (
     <form action={signOut} onSubmit={clearStamps}>
-      <button className="rounded-md border border-sogan/30 px-4 py-3 text-sm font-medium hover:border-bata hover:text-bata">Keluar</button>
+      <button className="tekan rounded-md bg-kertas px-4 py-3 text-sm font-bold hover:bg-kunyit">Keluar</button>
     </form>
   );
 }
