@@ -3,7 +3,7 @@
 import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Center, ContactShadows, Environment, useGLTF, useProgress, useTexture } from "@react-three/drei";
 import { Component, Suspense, useEffect, useEffectEvent, useMemo, useRef, useState, type ReactNode } from "react";
-import { Box3, CanvasTexture, Group, Object3D, PlaneGeometry, RepeatWrapping, Vector3, type Mesh, type PerspectiveCamera } from "three";
+import { Box3, CanvasTexture, Group, Object3D, PlaneGeometry, Ray, RepeatWrapping, Vector3, type Mesh, type PerspectiveCamera } from "three";
 import { ComicPass } from "@/components/ComicPass";
 import { polyhaven } from "@/data/assets";
 import type { Exhibit } from "@/data/cultureData";
@@ -18,9 +18,11 @@ const PITCH = 1.2; // batas mendongak/menunduk
 const REACH = 12; // jarak maksimum koleksi bisa dibidik (titik pandang tur pusat 8,5 m)
 const MOVE_KEYS = new Set(["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "shift"]);
 
-type View = { x: number; z: number; yaw: number };
-// base: tinggi alas; y: titik tengah koleksi yang dibidik crosshair; reach: toleransi bidikan (m)
-type Spot = { exhibit: Exhibit; index: number; x: number; z: number; y: number; base: number; rotY: number; radius: number; reach: number; view: View };
+type View = { x: number; z: number; yaw: number; pitch: number }; // pitch: tur menunduk/mendongak ke tengah koleksi
+// base: tinggi alas; y: titik tengah koleksi, sasaran lampu sorot
+type Spot = { exhibit: Exhibit; index: number; x: number; z: number; y: number; base: number; rotY: number; radius: number; view: View };
+// Objek 3D tiap koleksi (indeks = spot.index) untuk bidikan, dan koleksi di bawah mouse saat kursor tidak terkunci.
+type Pick = { targets: (Object3D | null)[]; hover: number | null };
 type Input = {
   keys: Set<string>;
   x: number;
@@ -35,6 +37,9 @@ type Input = {
 };
 
 const clampPitch = (p: number) => Math.max(-PITCH, Math.min(PITCH, p));
+const aimRay = new Ray();
+const aimBox = new Box3();
+const aimHit = new Vector3();
 
 // Chrome mengembalikan Promise (bisa ditolak tanpa gestur pengguna), Firefox tidak: gagal = pemain klik lagi.
 const lockPointer = (el: HTMLElement) => void Promise.resolve(el.requestPointerLock()).catch(() => {});
@@ -49,31 +54,33 @@ function layout(exhibits: Exhibit[]) {
     const isImage = exhibit.source.type === "commons";
     const base = isImage ? 0 : exhibit.height > 1.2 ? 0.15 : 1;
     const yaw = side === -1 ? Math.PI / 2 : -Math.PI / 2; // menghadap ke dinding
+    const x = side * (isImage ? W / 2 - 0.02 : W / 2 - 2.2);
+    const y = isImage ? 1.75 : base + exhibit.height / 2;
+    const vx = side * (isImage ? W / 2 - 3.8 : W / 2 - 5.2);
     return {
       exhibit,
       index: i + 1,
-      x: side * (isImage ? W / 2 - 0.02 : W / 2 - 2.2),
+      x,
       z,
-      y: isImage ? 1.75 : base + exhibit.height / 2,
+      y,
       base,
       rotY: yaw,
       radius: isImage ? 0 : 0.9,
-      reach: isImage ? 1.1 : 0.9,
-      view: { x: side * (isImage ? W / 2 - 3.8 : W / 2 - 5.2), z, yaw },
+      view: { x: vx, z, yaw, pitch: Math.atan2(y - EYE, Math.abs(x - vx)) },
     };
   });
   const cz = -length / 2 + 6.5;
+  const cy = 0.4 + center.height / 2;
   spots.unshift({
     exhibit: center,
     index: 0,
     x: 0,
     z: cz,
-    y: 0.4 + center.height / 2,
+    y: cy,
     base: 0.4,
     rotY: 0,
     radius: 3.6,
-    reach: 3.2,
-    view: { x: 0, z: cz + 8.5, yaw: 0 },
+    view: { x: 0, z: cz + 8.5, yaw: 0, pitch: Math.atan2(cy - EYE, 8.5) },
   });
   return { spots, length };
 }
@@ -88,6 +95,7 @@ export default function Museum(props: { name: string; summary: string; exhibits:
   const activeRef = useRef(active);
   const relock = useRef(false); // kursor terkunci saat jeda: kunci lagi waktu lanjut
   const aimRef = useRef<number | null>(null);
+  const pickRef = useRef<Pick>({ targets: [], hover: null });
   const [aim, setAim] = useState<number | null>(null);
   const [locked, setLocked] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
@@ -220,13 +228,14 @@ export default function Museum(props: { name: string; summary: string; exhibits:
         <hemisphereLight args={["#ffffff", "#9a8774", 1.2]} />
         {spots.map((s) => (
           <Suspense key={s.exhibit.id} fallback={null}>
-            <ExhibitView spot={s} onSelect={visit} />
+            <ExhibitView spot={s} onSelect={visit} pickRef={pickRef} />
           </Suspense>
         ))}
         <Walker
           inputRef={input}
           length={length}
           spots={spots}
+          pickRef={pickRef}
           onAim={(i) => {
             aimRef.current = i;
             setAim(i);
@@ -348,8 +357,14 @@ function MoveButton({ inputRef, moveKey, label, children }: { inputRef: React.Re
   );
 }
 
-function Walker(props: { inputRef: React.RefObject<Input>; length: number; spots: Spot[]; onAim: (i: number | null) => void }) {
-  const { inputRef, length, spots } = props;
+function Walker(props: {
+  inputRef: React.RefObject<Input>;
+  length: number;
+  spots: Spot[];
+  pickRef: React.RefObject<Pick>;
+  onAim: (i: number | null) => void;
+}) {
+  const { inputRef, length, spots, pickRef } = props;
   const aimed = useRef<number | null>(null);
   const calm = useMemo(() => matchMedia("(prefers-reduced-motion: reduce)").matches, []);
   useFrame((state, delta) => {
@@ -369,7 +384,7 @@ function Walker(props: { inputRef: React.RefObject<Input>; length: number; spots
       s.x += (s.tour.x - s.x) * t;
       s.z += (s.tour.z - s.z) * t;
       s.yaw += Math.atan2(Math.sin(s.tour.yaw - s.yaw), Math.cos(s.tour.yaw - s.yaw)) * t;
-      s.pitch -= s.pitch * t;
+      s.pitch += (s.tour.pitch - s.pitch) * t;
       if (Math.hypot(s.tour.x - s.x, s.tour.z - s.z) < 0.02) s.tour = null;
     } else {
       const sin = Math.sin(s.yaw);
@@ -405,24 +420,21 @@ function Walker(props: { inputRef: React.RefObject<Input>; length: number; spots
     camera.position.set(s.x, EYE + Math.sin(s.bob) * 0.035 * s.bobAmp, s.z);
     camera.rotation.set(s.pitch, s.yaw, 0, "YXZ");
 
-    // Koleksi yang dibidik crosshair: jarak tegak lurus terkecil dari garis pandang ke titik tengah koleksi.
-    const cp = Math.cos(s.pitch);
-    const fx = -Math.sin(s.yaw) * cp;
-    const fy = Math.sin(s.pitch);
-    const fz = -Math.cos(s.yaw) * cp;
-    let hit: number | null = null;
-    let best = Infinity;
-    for (const sp of spots) {
-      const dx = sp.x - s.x;
-      const dy = sp.y - EYE;
-      const dz = sp.z - s.z;
-      const along = dx * fx + dy * fy + dz * fz;
-      if (along <= 0 || along > REACH) continue;
-      const off = Math.hypot(dx - fx * along, dy - fy * along, dz - fz * along);
-      if (off < sp.reach && off < best) {
-        best = off;
-        hit = sp.index;
-      }
+    // Koleksi yang dibidik. Kursor bebas: benda di bawah mouse. Selain itu: garis pandang (crosshair) ke kotak pembatas
+    // tiap koleksi (dilonggarkan 20 cm untuk benda kecil), yang terdekat menang. Atap rumah adat atau ujung keris tetap kena.
+    const pick = pickRef.current;
+    let hit = document.pointerLockElement ? null : pick.hover;
+    if (hit === null) {
+      aimRay.set(camera.position, camera.getWorldDirection(aimHit));
+      let best = REACH;
+      pick.targets.forEach((g, i) => {
+        if (!g || !aimRay.intersectBox(aimBox.setFromObject(g).expandByScalar(0.2), aimHit)) return;
+        const d = aimHit.distanceTo(camera.position);
+        if (d < best) {
+          best = d;
+          hit = i;
+        }
+      });
     }
     if (hit !== aimed.current) {
       aimed.current = hit;
@@ -482,20 +494,29 @@ function Hall({ name, length }: { name: string; length: number }) {
   );
 }
 
-function ExhibitView({ spot, onSelect }: { spot: Spot; onSelect: (i: number) => void }) {
+function ExhibitView({ spot, onSelect, pickRef }: { spot: Spot; onSelect: (i: number) => void; pickRef: React.RefObject<Pick> }) {
   const { exhibit } = spot;
   const isCenter = spot.index === 0;
   const isImage = exhibit.source.type === "commons";
   const big = exhibit.height > 1.2;
   const { base } = spot;
 
+  const target = (g: Group | null) => {
+    pickRef.current.targets[spot.index] = g;
+  };
   const events = {
     onClick: (e: ThreeEvent<MouseEvent>) => {
       e.stopPropagation();
       if (e.delta < 6) onSelect(spot.index);
     },
-    onPointerOver: () => (document.body.style.cursor = "pointer"),
-    onPointerOut: () => (document.body.style.cursor = ""),
+    onPointerOver: () => {
+      document.body.style.cursor = "pointer";
+      pickRef.current.hover = spot.index;
+    },
+    onPointerOut: () => {
+      document.body.style.cursor = "";
+      pickRef.current.hover = null;
+    },
   };
 
   return (
@@ -504,12 +525,13 @@ function ExhibitView({ spot, onSelect }: { spot: Spot; onSelect: (i: number) => 
       {isImage ? (
         <Safe>
           <Suspense fallback={null}>
-            <Photo exhibit={exhibit} events={events} />
+            <Photo exhibit={exhibit} events={events} target={target} />
           </Suspense>
         </Safe>
       ) : (
         <>
-          <group {...events}>
+          {/* koleksi tengah dibidik dari modelnya saja: kotak alas bundar 7 m bisa dimasuki pemain di sudutnya */}
+          <group {...events} ref={isCenter ? undefined : target}>
             {isCenter ? (
               <mesh position-y={0.2}>
                 <cylinderGeometry args={[3.6, 3.7, 0.4, 64]} />
@@ -527,7 +549,7 @@ function ExhibitView({ spot, onSelect }: { spot: Spot; onSelect: (i: number) => 
                 </Suspense>
               </Safe>
             )}
-            <group position-y={base}>
+            <group position-y={base} ref={isCenter ? target : undefined}>
               <Safe fallback={<Missing />}>
                 <Suspense fallback={null}>
                   <Model id={exhibit.id} height={exhibit.height} maxWidth={isCenter ? 6.6 : big ? 1.5 : 0.8} extraTurn={exhibit.turn} />
@@ -613,13 +635,13 @@ const Missing = () => (
   </mesh>
 );
 
-function Photo({ exhibit, events }: { exhibit: Exhibit; events: object }) {
+function Photo({ exhibit, events, target }: { exhibit: Exhibit; events: object; target: (g: Group | null) => void }) {
   const tex = useTexture(`/images/${exhibit.id}.jpg`);
   const img = tex.image as HTMLImageElement;
   const h = exhibit.height;
   const w = (h * img.width) / img.height;
   return (
-    <group position={[0, 1.75, 0]} {...events}>
+    <group position={[0, 1.75, 0]} ref={target} {...events}>
       <mesh position-z={0.03}>
         <boxGeometry args={[w + 0.14, h + 0.14, 0.05]} />
         <meshStandardMaterial color="#2b1d14" />
