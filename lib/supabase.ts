@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
+import { io } from "next/cache";
 import { cookies } from "next/headers";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -10,6 +11,9 @@ export const supabaseReady = Boolean(url && key);
 
 // Klien dengan sesi pengguna (cookie). Hak akses ditegakkan RLS di database, bukan di sini.
 export async function supabaseServer() {
+  // Klien auth membaca Date.now() untuk cek kedaluwarsa sesi. Dengan partialPrefetching, cookies() ikut terbaca saat
+  // prerender app shell, jadi bukan titik tunda lagi: io() menahan bagian akun sampai request sungguhan.
+  await io();
   const store = await cookies();
   return createServerClient(url!, key!, {
     cookies: {
