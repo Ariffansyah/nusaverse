@@ -37,17 +37,22 @@ export function MainMenu({
   const [cards, setCards] = useState(firstCards);
   const [deal, setDeal] = useState(0); // naik tiap acak: memutar ulang animasi kartu ditempel
   const [fact, setFact] = useState(0);
+  const [openFact, setOpenFact] = useState<number | null>(null); // fakta yang sedang dibuka penuh
+  const open = openFact === fact;
 
   // Latar dan fakta berganti sendiri; berhenti kalau pemain meminta gerak minimal.
   useEffect(() => {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const bg = setInterval(() => setSlide((n) => (n + 1) % slides.length), 7000);
-    const tip = setInterval(() => setFact((n) => (n + 1) % photos.length), 8000);
-    return () => {
-      clearInterval(bg);
-      clearInterval(tip);
-    };
+    return () => clearInterval(bg);
   }, []);
+
+  // Fakta tidak berganti selama sedang dibaca penuh.
+  useEffect(() => {
+    if (open || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const tip = setInterval(() => setFact((n) => (n + 1) % photos.length), 8000);
+    return () => clearInterval(tip);
+  }, [open]);
 
   // Paralaks: posisi penunjuk ditulis langsung sebagai variabel CSS, tanpa render ulang.
   const onPointerMove = (e: PointerEvent) => {
@@ -94,15 +99,24 @@ export function MainMenu({
           </p>
 
           {/* balon fakta: gampang dilewati, tapi memberi alasan untuk menunggu di menu */}
-          <div className="balon relative mt-6 flex max-w-md items-start gap-3 bg-kertas px-4 py-3 text-sogan [@media(max-height:760px)]:hidden">
-            <div key={fact} className="ganti min-w-0 flex-1" aria-live="polite">
-              <p className="text-xs font-bold text-bata">
+          <div className="balon relative mt-6 flex max-w-lg items-start gap-3 bg-kertas px-4 py-3 text-sogan [@media(max-height:760px)]:hidden">
+            {/* klik teks untuk membaca fakta utuh; klik lagi untuk meringkas */}
+            <button
+              key={fact}
+              type="button"
+              aria-expanded={open}
+              onClick={() => setOpenFact(open ? null : fact)}
+              className="ganti min-w-0 flex-1 text-left"
+              aria-live="polite"
+            >
+              <span className="block text-xs font-bold text-bata">
                 Tahukah kamu? · {tip.province.name}
-              </p>
-              <p className="mt-0.5 line-clamp-2 text-sm leading-snug">
+              </span>
+              <span className={`mt-0.5 block text-sm leading-snug ${open ? "" : "line-clamp-2"}`}>
                 <b>{tip.title}</b> — {tip.description}
-              </p>
-            </div>
+              </span>
+              <span className="mt-1 block text-xs font-bold text-bata underline">{open ? "Ringkas ▴" : "Baca selengkapnya ▾"}</span>
+            </button>
             {/* tombol di kolomnya sendiri supaya tidak menutupi teks fakta */}
             <button
               type="button"
