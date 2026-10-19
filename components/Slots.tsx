@@ -4,7 +4,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import { Suspense } from "react";
 import { AuthForms, LogoutButton, NameForm, StoryForm } from "@/components/Forms";
 import { PassportSync } from "@/components/Passport";
-import { props as museumProps, shellCredits } from "@/data/assets";
+import { props as museumProps, sfxCredits, shellCredits } from "@/data/assets";
 import { findProvince, provinces, type Credit } from "@/data/cultureData";
 import { getViewer } from "@/lib/auth";
 import { supabasePublic, supabaseReady, supabaseServer } from "@/lib/supabase";
@@ -128,7 +128,7 @@ function CreditList({ items }: { items: { label: string; credit: Credit }[] }) {
 export function Credits() {
   return (
     <>
-      <p className="text-sogan-2">Model 3D, foto, dan peta di NusaVerse adalah karya orang lain yang dibagikan dengan lisensi terbuka. Terima kasih kepada para pembuatnya.</p>
+      <p className="text-sogan-2">Model 3D, foto, peta, dan efek suara di NusaVerse adalah karya orang lain yang dibagikan dengan lisensi terbuka. Terima kasih kepada para pembuatnya.</p>
       {provinces.map((p) => (
         <section key={p.slug} className="mt-6">
           <h3 className="font-display text-xl font-semibold">{p.name}</h3>
@@ -141,6 +141,7 @@ export function Credits() {
           items={[
             ...museumProps.map((p) => ({ label: "Alas pamer", credit: p.credit })),
             ...shellCredits.map((c) => ({ label: "Tekstur dan pencahayaan", credit: c })),
+            ...sfxCredits.map((c) => ({ label: "Efek suara", credit: c })),
             {
               label: "Peta provinsi (34 provinsi, sebelum pemekaran Papua 2022)",
               credit: { title: "@svg-maps/indonesia", author: "Bashir Arrohman", license: "CC BY 4.0", url: "https://github.com/VictorCazanave/svg-maps" },

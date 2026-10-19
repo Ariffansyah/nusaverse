@@ -29,6 +29,7 @@ import { ComicPass } from "@/components/ComicPass";
 import { furniture, polyhaven } from "@/data/assets";
 import { kinds, type Exhibit, type Island } from "@/data/cultureData";
 import { finishMission, markSeen, useMissions, useSeen } from "@/lib/passport";
+import { play } from "@/lib/sfx";
 import { shuffle } from "@/lib/shuffle";
 
 // Aula galeri: lorong berkubah tong (barrel vault) dengan rusuk di tiap petak, berujung apsis setengah lingkaran
@@ -40,6 +41,9 @@ const RISE = 2.6; // tinggi lengkung kubah di atas dinding (penampang setengah e
 const BAY = 6; // jarak antar-koleksi di sepanjang dinding
 const EYE = 1.6;
 const SPEED = 3.2; // m/detik, Shift = lari
+// Satu langkah tiap ±1,4 m: ±2,3 langkah/detik saat berjalan, lebih rapat saat lari. Tiga variasi bunyi supaya tidak terdengar seperti mesin.
+const STRIDE = 1.4;
+const steps = ["langkah0", "langkah1", "langkah2"] as const;
 const LOOK = 0.0022; // radian per piksel gerakan mouse saat kursor terkunci
 const PITCH = 1.2; // batas mendongak/menunduk
 const REACH = 12; // jarak maksimum koleksi bisa dibidik (titik pandang tur pusat 8,5 m)
@@ -216,10 +220,12 @@ export default function Museum(props: {
     setSelected(i);
     if (i === null) return;
     markSeen(spots[i].exhibit.id);
-    if (browsing || i !== target?.index) return;
+    if (browsing || i !== target?.index) return play("buka");
     setFound(found + 1);
     setHint(false);
-    if (found + 1 === targets.length) finishMission(slug);
+    if (found + 1 < targets.length) return play("benar");
+    finishMission(slug);
+    play("lulus");
   };
   const newMission = () => {
     setTargets(pickTargets(spots));
@@ -569,6 +575,7 @@ function Walker(props: {
 }) {
   const { inputRef, length, cz, blockers, pickRef } = props;
   const aimed = useRef<number | null>(null);
+  const stride = useRef(0); // jarak sejak bunyi langkah terakhir
   useFrame((state, delta) => {
     const camera = state.camera as PerspectiveCamera;
     const s = inputRef.current;
@@ -594,6 +601,14 @@ function Walker(props: {
       s.x += (-sin * fwd + cos * strafe) * speed * dt;
       s.z += (-cos * fwd - sin * strafe) * speed * dt;
     }
+
+    if (!s.tour && (fwd || strafe)) {
+      stride.current += Math.hypot(fwd, strafe) * speed * dt;
+      if (stride.current >= STRIDE) {
+        stride.current -= STRIDE;
+        play(steps[Math.floor(Math.random() * steps.length)]);
+      }
+    } else stride.current = STRIDE * 0.6; // diam: langkah pertama terdengar segera setelah mulai berjalan
 
     // ayunan kepala saat berjalan, mereda saat berhenti; dimatikan kalau pengguna meminta gerak minimal
     const walking = !s.tour && (fwd !== 0 || strafe !== 0) && !CALM;

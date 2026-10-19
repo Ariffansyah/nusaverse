@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Layar pendek (kebanyakan laptop dan ponsel): menu lengkap dengan balon fakta butuh ±900px tinggi.
+   Di bawahnya balon fakta disembunyikan dan menu dirapatkan supaya muat tanpa digulir. */
+@custom-variant pendek (@media (max-height: 900px));
+
 /* Pop komik: kertas krem, tinta hitam, merah cabai untuk aksi utama dan cap, kuning kunyit untuk sorotan (kotak narasi, peta).
    Nama token lama dipertahankan supaya kelas di semua komponen ikut berganti. Tema terang tetap: identitas brand. */
 :root {
@@ -255,10 +259,7 @@ body {
   }
 }
 
-/* Foto latar menu perlahan mundur, memberi hidup tanpa mengalihkan dari judul. */
-.ken-burns {
-  animation: ken-burns 22s ease-out backwards;
-}
+/* Foto latar menu perlahan mundur, memberi hidup tanpa mengalihkan dari judul (dipakai .latar-masuk). */
 @keyframes ken-burns {
   from {
     scale: 1.12;
@@ -523,7 +524,6 @@ body {
   .sapuan {
     display: none;
   }
-  .ken-burns,
   .ajak,
   .goyang,
   .huruf,

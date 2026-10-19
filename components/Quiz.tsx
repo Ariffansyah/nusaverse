@@ -5,6 +5,7 @@ import { useState } from "react";
 import { kinds, provinces, type Question } from "@/data/cultureData";
 import { saveStamps } from "@/app/actions";
 import { addStamp, usePassport } from "@/lib/passport";
+import { play } from "@/lib/sfx";
 import { shuffle } from "@/lib/shuffle";
 
 export function Quiz({ slug, name, questions }: { slug: string; name: string; questions: Question[] }) {
@@ -23,7 +24,10 @@ export function Quiz({ slug, name, questions }: { slug: string; name: string; qu
     if (scoreOf(picked) >= passMark) {
       addStamp(slug);
       saveStamps([slug]); // tamu: diabaikan server
-    }
+      // cap mendarat (animasi cap-jatuh), lalu jingle
+      play("cap", 0.12);
+      play("lulus", 0.35);
+    } else play("salah");
   }
 
   return (
@@ -135,6 +139,7 @@ export function GuessGame({ onVisit }: { onVisit: (slug: string) => void }) {
   function answer(slug: string) {
     setPick(slug);
     const right = slug === rounds[i].p.slug;
+    play(right ? "benar" : "salah");
     setScore(score + +right);
     setStreak(right ? streak + 1 : 0);
   }
@@ -142,6 +147,10 @@ export function GuessGame({ onVisit }: { onVisit: (slug: string) => void }) {
   function next() {
     setPick(null);
     setI(i + 1);
+    if (i + 1 === rounds.length) {
+      play("cap", 0.12); // skor akhir tampil sebagai cap
+      if (score >= 7) play("lulus", 0.35);
+    }
     if (i + 1 < rounds.length || score <= best) return;
     setBest(score);
     try {

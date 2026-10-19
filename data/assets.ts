@@ -20,3 +20,11 @@ export const shellCredits: Credit[] = [...Object.values(polyhaven), ...Object.va
   license: "CC0",
   url: `https://polyhaven.com/a/${slug}`,
 }));
+
+// Efek suara (lib/sfx.ts) dipilih dari paket audio Kenney (CC0), dikonversi ke public/audio/sfx/*.mp3.
+export const sfxCredits: Credit[] = ["Interface Sounds", "RPG Audio", "Impact Sounds", "Music Jingles"].map((title) => ({
+  title,
+  author: "Kenney",
+  license: "CC0",
+  url: `https://kenney.nl/assets/${title.toLowerCase().replace(" ", "-")}`,
+}));

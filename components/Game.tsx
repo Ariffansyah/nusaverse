@@ -3,10 +3,12 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from "react";
 import { MainMenu } from "@/components/MainMenu";
 import { MuseumLoader } from "@/components/MuseumLoader";
+import { VolumeControl } from "@/components/Volume";
 import { MapStamps, PassportBook, StampCount } from "@/components/Passport";
 import { GuessGame, Quiz } from "@/components/Quiz";
 import { findProvince, islands, provinces, type Province } from "@/data/cultureData";
 import { useMissions, usePassport, useSeen } from "@/lib/passport";
+import { play } from "@/lib/sfx";
 
 type Screen = "menu" | "map" | "museum";
 type PanelId = "jeda" | "info" | "kuis" | "tebak" | "cerita" | "paspor" | "peringkat" | "akun" | "kredit";
@@ -68,12 +70,22 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
   const [panel, setPanel] = useState<PanelId | null>(null);
   const [sweep, setSweep] = useState(0); // naik tiap pindah layar: memutar ulang sapuan tinta
   const fullscreen = useFullscreen();
+  const hovered = useRef<Element | null>(null); // tombol menu yang sedang disorot: bunyi sorot sekali per masuk
   const province = findProvince(slug)!;
 
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
-      if (panel || e.ctrlKey || e.metaKey || e.altKey) return; // <dialog> menangani Esc-nya sendiri
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
       const key = e.key.toLowerCase();
+      // Esc selalu menutup panel (dari menu jeda = lanjut main). Ditangani sendiri, bukan oleh <dialog>: Chrome mengabaikan
+      // Esc bawaan pada dialog yang dibuka tanpa gestur pengguna, padahal menu jeda dibuka oleh lepasnya kunci kursor.
+      if (panel) {
+        if (key === "escape") {
+          e.preventDefault();
+          setPanel(null);
+        }
+        return;
+      }
       const hotkey = museumKeys[key];
       if (screen === "museum" && hotkey) {
         e.preventDefault(); // tanpa ini, aksi bawaan Esc yang sama langsung menutup dialog yang baru dibuka
@@ -94,26 +106,46 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, [screen]);
 
+  // Panel komik ditempel: bunyi kertas. Di sini, bukan di efek Panel, supaya tidak berbunyi dua kali di Strict Mode.
+  useEffect(() => {
+    if (panel) play("buka");
+  }, [panel]);
+
   // Kode museum (three.js) diunduh sambil pemain memilih ruang.
   useEffect(() => {
     if (screen === "map") void import("@/components/Museum");
   }, [screen]);
 
   const go = (next: Screen) => {
+    play("balik"); // bunyi halaman dibalik, bersama sapuan tinta
     setPanel(null);
     setScreen(next);
     setSweep((n) => n + 1);
   };
 
   return (
-    <main className="game fixed inset-0 overflow-hidden bg-malam text-kertas">
+    // Bunyi antarmuka dipasang sekali di sini, bukan di tiap tombol: klik untuk semua tombol/pilihan/provinsi di peta,
+    // sorot untuk butir menu (disorot penunjuk atau dipindah dengan keyboard).
+    <main
+      className="game fixed inset-0 overflow-hidden bg-malam text-kertas"
+      onClickCapture={(e) => {
+        if ((e.target as Element).closest("button, input, [data-slug]")) play("klik");
+      }}
+      onPointerOver={(e) => {
+        const item = (e.target as Element).closest("nav button");
+        if (item && item !== hovered.current) play("sorot");
+        hovered.current = item;
+      }}
+      onFocus={(e) => {
+        if (e.target.matches("nav button:focus-visible")) play("sorot");
+      }}
+    >
       {slots.sync}
 
       {screen === "menu" && (
         <MainMenu
           onStart={(picked) => {
             if (picked) setSlug(picked);
-            if (fullscreen.supported && !fullscreen.on) fullscreen.toggle();
             go("map");
           }}
           onPanel={setPanel}
@@ -199,6 +231,13 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
                 Menu utama
               </button>
             </nav>
+          )}
+          {/* di luar <nav>: panah atas/bawah di sana memindah fokus, jadi akan menelan tombol panah penggeser */}
+          {panel === "jeda" && (
+            <VolumeControl
+              className="mt-4 border-t-2 border-sogan pt-4 accent-bata"
+              buttonClass="tekan rounded-md bg-kertas px-3 py-2 text-sm font-bold hover:bg-kunyit"
+            />
           )}
           {panel === "info" && <ProvinceInfo province={province} />}
           {panel === "kuis" && <Quiz slug={province.slug} name={province.name} questions={province.quiz} />}
