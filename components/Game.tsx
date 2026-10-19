@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from "react";
+import { MainMenu } from "@/components/MainMenu";
 import { MuseumLoader } from "@/components/MuseumLoader";
 import { MapStamps, PassportBook, StampCount } from "@/components/Passport";
 import { GuessGame, Quiz } from "@/components/Quiz";
@@ -111,11 +111,14 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
 
       {screen === "menu" && (
         <MainMenu
-          onStart={() => {
+          onStart={(picked) => {
+            if (picked) setSlug(picked);
             if (fullscreen.supported && !fullscreen.on) fullscreen.toggle();
             go("map");
           }}
           onPanel={setPanel}
+          arrowNav={arrowNav}
+          bigButton={bigButton}
         />
       )}
 
@@ -222,45 +225,6 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
         </Panel>
       )}
     </main>
-  );
-}
-
-function MainMenu({ onStart, onPanel }: { onStart: () => void; onPanel: OpenPanel }) {
-  const item = "flex items-center justify-between gap-3 rounded-md px-5 py-3 text-left text-lg font-medium text-kertas hover:bg-kertas hover:text-sogan";
-  return (
-    <section className="relative grid h-full items-center">
-      <Image src="/images/foto-kecak.jpg" alt="" fill priority sizes="100vw" className="ken-burns object-cover opacity-60 contrast-125 saturate-150" />
-      {/* gelap di sisi teks supaya judul dan menu tetap terbaca di atas foto; titik raster membuat foto terasa dicetak */}
-      <div className="absolute inset-0 bg-malam/75 sm:bg-transparent sm:bg-linear-to-r sm:from-malam sm:via-malam/85 sm:to-malam/25" />
-      <div className="halftone absolute inset-0" />
-      <div className="relative mx-auto w-full max-w-6xl px-6 sm:px-10">
-        <p className="komik inline-block -rotate-2 rounded-sm bg-kunyit px-3 py-1 font-bold text-sogan">Museum budaya Nusantara</p>
-        <h1 className="judul-komik judul-masuk mt-3 font-display text-7xl sm:text-9xl">NusaVerse</h1>
-        <p className="mt-4 max-w-md text-lg text-kertas/85">
-          Jelajahi {provinces.length} ruang pamer 3D, jawab kuisnya, dan kumpulkan cap paspor budaya.
-        </p>
-        <nav aria-label="Menu utama" className="urut mt-10 flex max-w-xs flex-col gap-1.5" onKeyDown={arrowNav}>
-          <button type="button" autoFocus onClick={onStart} className={`${bigButton} text-left`}>
-            Mulai jelajah
-          </button>
-          <button type="button" onClick={() => onPanel("tebak")} className={item}>
-            Tebak asal
-          </button>
-          <button type="button" onClick={() => onPanel("paspor")} className={item}>
-            Paspor budaya <StampCount />
-          </button>
-          <button type="button" onClick={() => onPanel("peringkat")} className={item}>
-            Peringkat penjelajah
-          </button>
-          <button type="button" onClick={() => onPanel("akun")} className={item}>
-            Akun
-          </button>
-          <button type="button" onClick={() => onPanel("kredit")} className={item}>
-            Kredit aset
-          </button>
-        </nav>
-      </div>
-    </section>
   );
 }
 

@@ -383,6 +383,141 @@ body {
   }
 }
 
+/* ===== Menu utama: sampul komik yang hidup ===== */
+
+/* Foto latar berikutnya memudar masuk di atas foto sebelumnya. */
+.latar-masuk {
+  animation:
+    pudar 1.4s ease-out backwards,
+    ken-burns 22s ease-out backwards;
+}
+
+/* Huruf judul melompat bergelombang sesekali, dan meloncat sendiri saat disorot. */
+.huruf {
+  display: inline-block;
+  animation: lompat 4.2s calc(900ms + var(--i) * 70ms) ease-in-out infinite;
+  transition:
+    translate 160ms var(--lepas),
+    rotate 160ms var(--lepas),
+    color 160ms;
+}
+.huruf:hover {
+  animation: none;
+  translate: 0 -0.12em;
+  rotate: -8deg;
+  color: var(--kertas);
+}
+@keyframes lompat {
+  0%,
+  14%,
+  100% {
+    translate: 0 0;
+  }
+  5% {
+    translate: 0 -0.14em;
+  }
+  9% {
+    translate: 0 0.02em;
+  }
+}
+
+/* Label kecil di atas judul bergoyang pelan seperti stiker yang ditiup angin. */
+.goyang-pelan {
+  animation: goyang-pelan 3.2s ease-in-out infinite alternate;
+}
+@keyframes goyang-pelan {
+  to {
+    rotate: 1deg;
+  }
+}
+
+/* Ledakan "Ayo!" di samping tombol mulai: bintang bergerigi kunyit yang berdenyut. */
+.ledakan {
+  rotate: 12deg;
+  animation: ledakan 900ms ease-in-out infinite alternate;
+}
+.ledakan::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--kunyit);
+  clip-path: polygon(50% 0, 61% 26%, 90% 10%, 78% 39%, 100% 50%, 78% 61%, 90% 90%, 61% 74%, 50% 100%, 39% 74%, 10% 90%, 22% 61%, 0 50%, 22% 39%, 10% 10%, 39% 26%);
+  filter: drop-shadow(2px 2px 0 var(--sogan));
+}
+@keyframes ledakan {
+  to {
+    scale: 1.15;
+    rotate: 4deg;
+  }
+}
+
+/* Kartu koleksi: ditempel satu per satu, lalu melayang pelan dengan paralaks mengikuti penunjuk. */
+.tempel-kartu {
+  translate: calc(var(--px, 0) * (18px + var(--i) * 14px)) calc(var(--py, 0) * (14px + var(--i) * 10px));
+  transition: translate 400ms var(--lepas);
+}
+.kartu-0 {
+  top: 0;
+  left: 0;
+  --r: -7deg;
+}
+.kartu-1 {
+  top: 7rem;
+  right: 0;
+  --r: 5deg;
+}
+.kartu-2 {
+  top: 15rem;
+  left: 2rem;
+  --r: -2deg;
+}
+.kartu-koleksi {
+  rotate: var(--r);
+  animation:
+    tempel 500ms calc(300ms + var(--i) * 120ms) var(--lepas) backwards,
+    melayang calc(3.4s + var(--i) * 0.6s) calc(var(--i) * -1.1s) ease-in-out infinite alternate;
+  transition:
+    rotate 200ms var(--lepas),
+    scale 200ms var(--lepas),
+    box-shadow 200ms;
+}
+.kartu-koleksi:hover,
+.kartu-koleksi:focus-visible {
+  rotate: 0deg;
+  scale: 1.06;
+  box-shadow: 9px 9px 0 var(--bayang);
+  animation-play-state: paused;
+}
+.tempel-kartu:has(:hover, :focus-visible) {
+  z-index: 1;
+}
+@keyframes tempel {
+  from {
+    opacity: 0;
+    scale: 1.5;
+    rotate: 14deg;
+  }
+}
+@keyframes melayang {
+  to {
+    translate: 0 -10px;
+  }
+}
+
+/* Pita nama provinsi berjalan terus; berhenti saat disorot supaya bisa dibaca. */
+.pita-jalan {
+  animation: pita 60s linear infinite;
+}
+.pita:hover .pita-jalan {
+  animation-play-state: paused;
+}
+@keyframes pita {
+  to {
+    translate: -50% 0;
+  }
+}
+
 /* Gerak minimal: tanpa perpindahan ruang. Umpan balik dan pergantian keadaan tetap terbaca lewat pudar. */
 @media (prefers-reduced-motion: reduce) {
   .sapuan {
@@ -390,8 +525,23 @@ body {
   }
   .ken-burns,
   .ajak,
-  .goyang {
+  .goyang,
+  .huruf,
+  .goyang-pelan,
+  .ledakan,
+  .pita-jalan {
     animation: none;
+  }
+  .latar-masuk {
+    animation: pudar 1.4s ease-out backwards;
+  }
+  .kartu-koleksi {
+    animation: pudar 500ms backwards;
+  }
+  .tempel-kartu,
+  .huruf {
+    translate: none;
+    transition: none;
   }
   .cap-baru,
   .cap-urut,
