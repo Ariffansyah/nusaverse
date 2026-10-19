@@ -94,8 +94,8 @@ export function MainMenu({
           </p>
 
           {/* balon fakta: gampang dilewati, tapi memberi alasan untuk menunggu di menu */}
-          <div className="balon relative mt-6 max-w-md bg-kertas px-4 py-3 text-sogan [@media(max-height:760px)]:hidden" aria-live="polite">
-            <div key={fact} className="ganti">
+          <div className="balon relative mt-6 flex max-w-md items-start gap-3 bg-kertas px-4 py-3 text-sogan [@media(max-height:760px)]:hidden">
+            <div key={fact} className="ganti min-w-0 flex-1" aria-live="polite">
               <p className="text-xs font-bold text-bata">
                 Tahukah kamu? · {tip.province.name}
               </p>
@@ -103,10 +103,11 @@ export function MainMenu({
                 <b>{tip.title}</b> — {tip.description}
               </p>
             </div>
+            {/* tombol di kolomnya sendiri supaya tidak menutupi teks fakta */}
             <button
               type="button"
               onClick={() => setFact((n) => (n + 1 + Math.floor(Math.random() * (photos.length - 1))) % photos.length)}
-              className="tekan absolute -right-3 -bottom-3 rotate-6 rounded-md bg-kunyit px-2 py-0.5 font-display text-lg"
+              className="tekan shrink-0 rotate-3 self-center rounded-md bg-kunyit px-2 py-0.5 font-display text-lg"
             >
               Lagi!
             </button>
