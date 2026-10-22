@@ -43,3 +43,6 @@ next-env.d.ts
 
 # cache lokal plugin impeccable (path & sesi mesin ini)
 .impeccable/hook.cache.json
+/dist/
+.vinext/
+.cloudflare/
