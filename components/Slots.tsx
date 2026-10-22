@@ -4,7 +4,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import { Suspense } from "react";
 import { AuthForms, LogoutButton, NameForm, StoryForm } from "@/components/Forms";
 import { PassportSync } from "@/components/Passport";
-import { props as museumProps, sfxCredits, shellCredits } from "@/data/assets";
+import { exhibitSounds, props as museumProps, sfxCredits, shellCredits } from "@/data/assets";
 import { findProvince, provinces, type Credit } from "@/data/cultureData";
 import { getViewer } from "@/lib/auth";
 import { supabasePublic, supabaseReady, supabaseServer } from "@/lib/supabase";
@@ -135,6 +135,15 @@ export function Credits() {
           <CreditList items={p.exhibits.map((e) => ({ label: e.title, credit: e.credit }))} />
         </section>
       ))}
+      <section className="mt-6">
+        <h3 className="font-display text-xl font-semibold">Suara koleksi</h3>
+        <CreditList
+          items={Object.entries(exhibitSounds).map(([id, sound]) => ({
+            label: provinces.flatMap((p) => p.exhibits).find((e) => e.id === id)?.title ?? id,
+            credit: sound.credit,
+          }))}
+        />
+      </section>
       <section className="mt-6">
         <h3 className="font-display text-xl font-semibold">Ruang museum dan peta</h3>
         <CreditList

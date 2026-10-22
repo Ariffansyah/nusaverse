@@ -1,6 +1,8 @@
 // pnpm check:data: gagal kalau data budaya tidak cocok dengan peta atau kuisnya rusak.
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import indonesia from "@svg-maps/indonesia";
+import { exhibitSounds } from "./assets.ts";
 import { provinces } from "./cultureData.ts";
 
 const mapIds = new Set(indonesia.locations.map((l: { id: string }) => l.id));
@@ -27,4 +29,13 @@ for (const p of provinces) {
   }
 }
 
-console.log(`OK: ${provinces.length} provinsi valid`);
+// suara koleksi harus menempel pada koleksi yang ada, dan berkasnya sudah ada di public/
+for (const [id, sound] of Object.entries(exhibitSounds)) {
+  assert(exhibitIds.has(id), `suara ${id}: tidak ada koleksi dengan id ini`);
+  for (const file of "clip" in sound ? [sound.clip] : sound.notes.map((n) => n.file)) {
+    assert(existsSync(`public/audio/koleksi/${file}`), `suara ${id}: berkas ${file} tidak ada`);
+  }
+  if ("notes" in sound) assert(sound.notes.length <= 9, `suara ${id}: maksimal 9 nada (tombol 1-9)`);
+}
+
+console.log(`OK: ${provinces.length} provinsi valid, ${Object.keys(exhibitSounds).length} koleksi bersuara`);

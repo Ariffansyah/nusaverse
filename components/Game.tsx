@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from "react";
 import { MainMenu } from "@/components/MainMenu";
 import { MuseumLoader } from "@/components/MuseumLoader";
 import { VolumeControl } from "@/components/Volume";
@@ -8,7 +8,7 @@ import { MapStamps, PassportBook, StampCount } from "@/components/Passport";
 import { GuessGame, Quiz } from "@/components/Quiz";
 import { findProvince, islands, provinces, type Province } from "@/data/cultureData";
 import { useMissions, usePassport, useSeen } from "@/lib/passport";
-import { play } from "@/lib/sfx";
+import { play, startGuide, stopGuide, useGuideVoice, useGuiding } from "@/lib/sfx";
 
 type Screen = "menu" | "map" | "museum";
 type PanelId = "jeda" | "info" | "kuis" | "tebak" | "cerita" | "paspor" | "peringkat" | "akun" | "kredit";
@@ -72,6 +72,13 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
   const fullscreen = useFullscreen();
   const hovered = useRef<Element | null>(null); // tombol menu yang sedang disorot: bunyi sorot sekali per masuk
   const province = findProvince(slug)!;
+  const guideVoice = useGuideVoice();
+  const guiding = useGuiding();
+  const toggleGuide = () => (guiding ? stopGuide() : startGuide(guideScript(province)));
+  const onGuideKey = useEffectEvent(toggleGuide);
+
+  // Pemandu berhenti saat pemain keluar dari ruang pamer atau pindah provinsi.
+  useEffect(() => stopGuide, [screen, slug]);
 
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
@@ -86,6 +93,7 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
         }
         return;
       }
+      if (screen === "museum" && key === "g" && guideVoice) return onGuideKey();
       const hotkey = museumKeys[key];
       if (screen === "museum" && hotkey) {
         e.preventDefault(); // tanpa ini, aksi bawaan Esc yang sama langsung menutup dialog yang baru dibuka
@@ -95,7 +103,7 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [screen, panel]);
+  }, [screen, panel, guideVoice]);
 
   // Browser tanpa Keyboard Lock memakai Esc untuk keluar layar penuh tanpa memberi tahu halaman: anggap itu jeda.
   useEffect(() => {
@@ -129,7 +137,7 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
     <main
       className="game fixed inset-0 overflow-hidden bg-malam text-kertas"
       onClickCapture={(e) => {
-        if ((e.target as Element).closest("button, input, [data-slug]")) play("klik");
+        if ((e.target as Element).closest("button:not([data-nada]), input, [data-slug]")) play("klik");
       }}
       onPointerOver={(e) => {
         const item = (e.target as Element).closest("nav button");
@@ -177,6 +185,11 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
               <p className="font-display text-2xl leading-tight">{province.name}</p>
             </div>
             <div className="pointer-events-auto flex gap-1.5">
+              {guideVoice && (
+                <button type="button" onClick={toggleGuide} aria-pressed={guiding} className={hudButton}>
+                  {guiding ? "■ Hentikan" : "▶ Pemandu"}
+                </button>
+              )}
               <button type="button" onClick={() => setPanel("info")} className={hudButton}>
                 Info
               </button>
@@ -375,6 +388,26 @@ function Panel({ title, onClose, children }: { title: string; onClose: () => voi
       <div className="p-5 sm:p-6">{children}</div>
     </dialog>
   );
+}
+
+// Naskah pemandu suara: hanya dari data provinsi yang juga tampil di panel Info, tanpa fakta tambahan.
+function guideScript(p: Province) {
+  const food = p.exhibits.filter((e) => e.kind === "kuliner").map((e) => e.title);
+  return [
+    `Selamat datang di ruang pamer ${p.name}.`,
+    p.summary,
+    `Rumah adat: ${p.house.name}.`,
+    p.house.description,
+    `Pakaian adat: ${p.attire.name}.`,
+    p.attire.description,
+    `Tarian: ${p.dance.name}.`,
+    p.dance.description,
+    `Lagu daerah: ${p.music.song}, dengan alat musik ${p.music.instrument}.`,
+    food.length ? `Kuliner di ruang pamer ini: ${food.join(", ")}.` : "",
+    `Sejarah singkat. ${p.history}`,
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 function ProvinceInfo({ province: p }: { province: Province }) {

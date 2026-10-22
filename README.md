@@ -40,6 +40,8 @@ Each province gets its own gallery hall built with React Three Fiber: a barrel-v
 | Hold right click | Zoom |
 | C | Switch between look mode and free cursor |
 | H | Show a hint for the current mission |
+| G | Start or stop the voice guide |
+| 1 to 9 | Play the notes of the instrument whose card is open |
 | I | Province info |
 | K | Quiz |
 | Esc or M | Pause menu |
@@ -49,6 +51,14 @@ On touch screens, drag to look and hold the on-screen arrows to move. The tour b
 The three.js code is only downloaded once you reach the map, so the menu loads fast. If WebGL fails, the hall shows an error with a retry button instead of a blank screen.
 
 ![Inspecting the main exhibit of the hall](docs/screenshots/museum-koleksi.webp)
+
+### Sound in the museum
+
+Some exhibits have sound. Opening the card of a performance plays a field recording: the Ciung Wulung bass angklung group from Kasepuhan Ciptagelar (Seren Taun photo, Jawa Barat), a Kecak performance (Bali), and a gambus from Kutai (shown on the Gambus Melayu exhibit in Kalimantan Barat, with the card saying where the recording is from). Two instruments can be played: the angklung model in Jawa Barat has eight notes from do to the high do, and the talempong in Sumatera Barat has five gongs. Use the buttons on the card or the number keys.
+
+The Pemandu button in the museum reads a short tour of the province out loud: summary, traditional house, attire, dance, regional song, food in the hall, and history. The text comes from the same province data as the info panel. It uses the browser's Indonesian voice, so the button only appears when the browser or device has one. Chrome and Edge on desktop usually do, and so do most phones.
+
+Sasando, sape', kolintang, tifa, and taganing have no sound yet because no openly licensed recordings were found. To add one, put the file in `public/audio/koleksi/` and add an entry to `exhibitSounds` in `data/assets.ts`. `pnpm check:data` fails if a file is missing.
 
 ### Curator mission
 
@@ -205,4 +215,4 @@ proxy.ts          refreshes the Supabase session cookie
 
 ## Credits
 
-3D models are from Sketchfab, photos from Wikimedia Commons, textures, HDRI and furniture from Poly Haven, sound effects from Kenney, and the province map from `@svg-maps/indonesia`. Each item's author and license is listed in the "Kredit aset" panel in the game.
+3D models are from Sketchfab, photos from Wikimedia Commons, exhibit sound recordings from Freesound and Wikimedia Commons, textures, HDRI and furniture from Poly Haven, sound effects from Kenney, and the province map from `@svg-maps/indonesia`. Each item's author and license is listed in the "Kredit aset" panel in the game.

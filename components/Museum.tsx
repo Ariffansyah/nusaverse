@@ -26,10 +26,10 @@ import {
 } from "three";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { ComicPass } from "@/components/ComicPass";
-import { furniture, polyhaven } from "@/data/assets";
+import { exhibitSounds, furniture, polyhaven, type ExhibitSound } from "@/data/assets";
 import { kinds, type Exhibit, type Island } from "@/data/cultureData";
 import { finishMission, markSeen, useMissions, useSeen } from "@/lib/passport";
-import { play } from "@/lib/sfx";
+import { play, playNote, playRecording, stopRecording, useGuideVoice, useRecording } from "@/lib/sfx";
 import { shuffle } from "@/lib/shuffle";
 
 // Aula galeri: lorong berkubah tong (barrel vault) dengan rusuk di tiap petak, berujung apsis setengah lingkaran
@@ -102,6 +102,7 @@ const aimHit = new Vector3();
 
 // Chrome mengembalikan Promise (bisa ditolak tanpa gestur pengguna), Firefox tidak: gagal = pemain klik lagi.
 const lockPointer = (el: HTMLElement) => void Promise.resolve(el.requestPointerLock()).catch(() => {});
+const soundUrl = (file: string) => `/audio/koleksi/${file}`;
 
 // Koleksi pertama di tengah apsis, sisanya berselang kiri-kanan di sepanjang dinding lorong (foto digantung, model di atas alas).
 function layout(exhibits: Exhibit[]) {
@@ -213,12 +214,16 @@ export default function Museum(props: {
   const seen = spots.filter((s) => seenIds?.includes(s.exhibit.id)).length;
   const target = found < targets.length ? spots[targets[found]] : null;
   const { active: loading, progress } = useProgress();
+  const guideVoice = useGuideVoice();
 
   // Satu pintu untuk membuka keterangan koleksi: dari tur, klik, atau bidikan crosshair.
   // browsing: dibuka lewat tombol tur ◀ ▶, tidak dihitung sebagai menemukan sasaran misi.
   const select = (i: number | null, browsing = false) => {
     setSelected(i);
+    stopRecording();
     if (i === null) return;
+    const sound = exhibitSounds[spots[i].exhibit.id];
+    if (sound && "clip" in sound) playRecording(soundUrl(sound.clip));
     markSeen(spots[i].exhibit.id);
     if (browsing || i !== target?.index) return play("buka");
     setFound(found + 1);
@@ -233,6 +238,13 @@ export default function Museum(props: {
     setHint(false);
   };
   const inspect = useEffectEvent(() => select(aimRef.current));
+  // Angka 1–9 memainkan nada alat musik yang kartunya sedang terbuka, juga saat kursor terkunci.
+  const playKey = useEffectEvent((n: number) => {
+    const sound = selected === null ? undefined : exhibitSounds[spots[selected].exhibit.id];
+    if (sound && "notes" in sound && sound.notes[n]) playNote(soundUrl(sound.notes[n].file));
+  });
+
+  useEffect(() => stopRecording, []);
   const pause = useEffectEvent(() => props.onPause());
 
   useEffect(() => {
@@ -258,6 +270,7 @@ export default function Museum(props: {
       if (!activeRef.current) return;
       if (key === "e" && !e.repeat) return inspect();
       if (key === "h") return setHint(true);
+      if (/^[1-9]$/.test(key)) return playKey(Number(key) - 1);
       // C: bolak-balik mode lihat (kursor terkunci) dan mode mouse (kursor bebas untuk menekan tombol di layar)
       if (key === "c" && !e.repeat) {
         const root = rootRef.current!;
@@ -435,11 +448,12 @@ export default function Museum(props: {
           <p className="text-xs font-bold text-bata">{kinds[shown.kind]}</p>
           <div className="flex items-start justify-between gap-3">
             <h2 className="font-display text-2xl">{shown.title}</h2>
-            <button type="button" onClick={() => setSelected(null)} className="tekan -mt-1 rounded-md bg-kertas px-3 py-1.5 text-sm font-bold hover:bg-kunyit" aria-label="Tutup keterangan">
+            <button type="button" onClick={() => select(null)} className="tekan -mt-1 rounded-md bg-kertas px-3 py-1.5 text-sm font-bold hover:bg-kunyit" aria-label="Tutup keterangan">
               Tutup
             </button>
           </div>
           <p className="mt-1 text-sm leading-relaxed">{shown.description}</p>
+          {exhibitSounds[shown.id] && <SoundControls sound={exhibitSounds[shown.id]} />}
           <p className="mt-2 text-xs text-sogan-2">
             {shown.source.type === "sketchfab" ? "Model" : "Foto"}:{" "}
             <a href={shown.credit.url} target="_blank" rel="noreferrer" className="underline hover:text-bata">
@@ -510,7 +524,7 @@ export default function Museum(props: {
       </nav>
 
       <p className="pointer-events-none absolute right-3 bottom-3 hidden max-w-xs rounded-md bg-malam/80 px-3 py-2 text-xs leading-relaxed text-kertas pointer-fine:block">
-        W A S D jalan · Shift lari · E lihat koleksi · H petunjuk misi · C kursor bebas · tahan klik kanan untuk zoom · I info · K kuis · Esc menu
+        W A S D jalan · Shift lari · E lihat koleksi · H petunjuk misi · C kursor bebas · tahan klik kanan untuk zoom · I info · K kuis{guideVoice && " · G pemandu suara"} · Esc menu
       </p>
 
       <div className="absolute right-3 bottom-3 hidden grid-cols-3 gap-1.5 pointer-coarse:grid" aria-label="Kontrol berjalan">
@@ -543,6 +557,47 @@ export default function Museum(props: {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Rekaman diputar sendiri saat kartu dibuka (lihat select); nada alat musik dimainkan dengan tombol atau angka 1–9.
+function SoundControls({ sound }: { sound: ExhibitSound }) {
+  const playing = useRecording();
+  const button = "tekan rounded-md bg-kunyit px-3 py-2 text-sm font-bold hover:bg-kertas";
+  let controls: ReactNode;
+  if ("notes" in sound) {
+    controls = (
+      <>
+        <p className="text-xs font-bold">Mainkan: klik nadanya atau tekan 1–{sound.notes.length}</p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {sound.notes.map((n) => (
+            // data-nada: tanpa bunyi klik antarmuka yang menimpa nadanya (lihat Game)
+            <button key={n.file} type="button" data-nada onClick={() => playNote(soundUrl(n.file))} className={`${button} min-w-11`}>
+              {n.label}
+            </button>
+          ))}
+        </div>
+      </>
+    );
+  } else {
+    const url = soundUrl(sound.clip);
+    controls = (
+      <button type="button" onClick={() => (playing === url ? stopRecording() : playRecording(url))} className={button}>
+        {playing === url ? "■ Hentikan rekaman" : "▶ Putar rekaman"}
+      </button>
+    );
+  }
+  return (
+    <div className="mt-3 border-t-2 border-sogan pt-3">
+      {controls}
+      <p className="mt-2 text-xs text-sogan-2">
+        {sound.about} Rekaman:{" "}
+        <a href={sound.credit.url} target="_blank" rel="noreferrer" className="underline hover:text-bata">
+          {sound.credit.author}
+        </a>
+        , {sound.credit.license}
+      </p>
     </div>
   );
 }
