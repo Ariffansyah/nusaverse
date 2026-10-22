@@ -137,7 +137,7 @@ pnpm dev:vinext   # same app on Vite, http://localhost:3001
 
 ## Deploying to Cloudflare
 
-The Cloudflare build uses [vinext](https://github.com/cloudflare/vinext), which runs the same `app/` directory on Vite and deploys it as a single Cloudflare Worker named `uinic`. The config is in `vite.config.ts` and `cloudflare.config.ts`. Cached data (the leaderboard and community stories) is stored in a KV namespace that the deploy creates on its first run.
+The Cloudflare build uses [vinext](https://github.com/cloudflare/vinext), which runs the same `app/` directory on Vite and deploys it as a single Cloudflare Worker named `nusaverse`. The config is in `vite.config.ts` and `cloudflare.config.ts`. Cached data (the leaderboard and community stories) is stored in a KV namespace that the deploy creates on its first run.
 
 The Supabase values are compiled into the build, so they have to be available when the build runs.
 
@@ -149,7 +149,7 @@ In the Cloudflare dashboard, open the Worker, then Settings, Build:
 - Build command: leave empty (the deploy command builds the app)
 - Build variables: `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 
-The default deploy command, `npx wrangler deploy`, does not work with this setup. The Worker in the dashboard must be named `uinic`, or change `name` in `cloudflare.config.ts` to match it.
+The default deploy command, `npx wrangler deploy`, does not work with this setup. The Worker in the dashboard must be named `nusaverse`, or change `name` in `cloudflare.config.ts` to match it.
 
 ### From your machine
 
