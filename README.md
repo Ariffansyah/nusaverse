@@ -4,6 +4,8 @@ A browser game about Indonesian culture. Pick a province on the map, walk throug
 
 The app covers 34 provinces (the map predates the 2022 Papua split) with 335 exhibits: 111 3D models and 224 photos. All UI text is in Indonesian.
 
+![Main menu](docs/screenshots/menu.webp)
+
 ## Features
 
 ### Main menu
@@ -21,9 +23,13 @@ The app covers 34 provinces (the map predates the 2022 Papua split) with 335 exh
 - Provinces you already stamped are filled in red on the map.
 - The side panel shows the province summary, how many exhibits you have seen there, and whether you finished its quiz and curator mission.
 
+![Province map with stamped provinces in red](docs/screenshots/peta.webp)
+
 ### 3D museum
 
 Each province gets its own gallery hall built with React Three Fiber: a barrel-vaulted corridor that ends in a half dome. The main exhibit (always a 3D model) stands in the center of the apse. The rest alternate along the walls, photos hung on the wall and models on pedestals, each with a spotlight and a text plaque. Small objects spin slowly on turntables. Carpet and trim colors change per island. The whole scene uses a comic book style with ink outlines and halftone shading.
+
+![Museum hall for Jawa Timur with the curator mission card](docs/screenshots/museum.webp)
 
 | Input | Action |
 | --- | --- |
@@ -42,6 +48,8 @@ On touch screens, drag to look and hold the on-screen arrows to move. The tour b
 
 The three.js code is only downloaded once you reach the map, so the menu loads fast. If WebGL fails, the hall shows an error with a retry button instead of a blank screen.
 
+![Inspecting the main exhibit of the hall](docs/screenshots/museum-koleksi.webp)
+
 ### Curator mission
 
 Every hall has a mission with three exhibits to find. They are found one at a time, and each clue is the exhibit description with the words from its title blanked out. The hint shows the first letter of each word. Finding all three earns a curator star for that province.
@@ -54,9 +62,13 @@ The info panel lists the traditional house, attire, dance, regional song and ins
 
 Each province has its own quiz. Get at least two thirds of the answers right to earn its stamp. Stamps, seen exhibits, and curator stars are saved in the browser, so the game works without an account. Progress stays in sync across open tabs.
 
+![Quiz result with a new stamp](docs/screenshots/kuis.webp)
+
 ### Tebak asal (guess the origin)
 
 Ten rounds. Each round shows a photo from a random province and four choices. One wrong choice always comes from the same island, so you cannot guess from the island alone. The game tracks your streak and keeps your best score on the device. After each answer you can open that province on the map.
+
+![Tebak asal round](docs/screenshots/tebak-asal.webp)
 
 ### Culture passport
 
@@ -64,6 +76,8 @@ Ten rounds. Each round shows a photo from a random province and four choices. On
 - A collection album that counts seen exhibits in seven categories: buildings, clothing, food, art and music, traditions, heirlooms, nature and wildlife.
 - Unstamped provinces link back to the map.
 - A button to clear all progress on the device. Stamps saved to an account are not affected.
+
+![Culture passport](docs/screenshots/paspor.webp)
 
 ### Accounts and leaderboard
 
@@ -123,22 +137,26 @@ pnpm dev:vinext   # same app on Vite, http://localhost:3001
 
 ## Deploying to Cloudflare
 
-The Cloudflare build uses [vinext](https://github.com/cloudflare/vinext), which runs the same `app/` directory on Vite and deploys it as a Cloudflare Worker. The config is in `vite.config.ts` and `cloudflare.config.ts`. Cached responses are stored with Workers Response Store, which runs as a second Worker named `uinic-response-store` backed by an R2 bucket.
+The Cloudflare build uses [vinext](https://github.com/cloudflare/vinext), which runs the same `app/` directory on Vite and deploys it as a single Cloudflare Worker named `uinic`. The config is in `vite.config.ts` and `cloudflare.config.ts`. Cached data (the leaderboard and community stories) is stored in a KV namespace that the deploy creates on its first run.
 
-The Supabase values in `.env.local` are compiled into the build, so they must be present on the machine that runs the deploy.
+The Supabase values are compiled into the build, so they have to be available when the build runs.
 
-One-time setup:
+### From GitHub (Workers Builds)
+
+In the Cloudflare dashboard, open the Worker, then Settings, Build:
+
+- Deploy command: `pnpm deploy:vinext`
+- Build command: leave empty (the deploy command builds the app)
+- Build variables: `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+
+The default deploy command, `npx wrangler deploy`, does not work with this setup. The Worker in the dashboard must be named `uinic`, or change `name` in `cloudflare.config.ts` to match it.
+
+### From your machine
+
+With the Supabase values in `.env.local`:
 
 ```bash
 pnpm exec cf auth login
-pnpm exec cf r2 buckets create --name uinic-response-store-cache-bodies
-pnpm build:vinext
-pnpm deploy:response-store
-```
-
-Deploy the app (run this again for every update):
-
-```bash
 pnpm deploy:vinext
 ```
 
@@ -165,7 +183,6 @@ Two limits to know about on Cloudflare: vinext marks `cacheComponents` support a
 | `pnpm build:vinext` | Build for Cloudflare Workers |
 | `pnpm start:vinext` | Run the Worker build locally |
 | `pnpm deploy:vinext` | Build and deploy to Cloudflare |
-| `pnpm deploy:response-store` | Deploy the cache Worker |
 | `pnpm check:data` | Validate province data against the map and quiz answers |
 | `pnpm assets` | Download missing models, photos, textures, and HDRI |
 | `pnpm lint` | ESLint |
@@ -180,6 +197,7 @@ components/       game screens, 3D museum, quiz, passport, forms
 data/             province and exhibit data, asset list, data check
 lib/              Supabase clients, passport storage, sound effects
 public/           models, photos, textures, HDRI, sound effects
+docs/screenshots/ README images
 scripts/          asset download script
 supabase/         database schema and policies
 proxy.ts          refreshes the Supabase session cookie

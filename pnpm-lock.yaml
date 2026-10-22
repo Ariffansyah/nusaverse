@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@cloudflare/workers-response-store':
-        specifier: ^1.1.2
-        version: 1.1.2
       '@react-three/drei':
         specifier: ^10.7.9
         version: 10.7.9(@react-three/fiber@9.8.1(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(three@0.186.1))(@types/react@19.3.0)(@types/three@0.186.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(three@0.186.1)

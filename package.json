@@ -12,11 +12,9 @@
     "dev:vinext": "vite dev --port 3001",
     "build:vinext": "vite build",
     "start:vinext": "vite preview",
-    "deploy:vinext": "vinext-cloudflare deploy",
-    "deploy:response-store": "cf deploy --prebuilt --mode production --worker uinic-response-store"
+    "deploy:vinext": "vinext-cloudflare deploy"
   },
   "dependencies": {
-    "@cloudflare/workers-response-store": "^1.1.2",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.1",
     "@supabase/ssr": "^0.12.7",
