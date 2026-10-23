@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { MainMenu } from "@/components/MainMenu";
 import { MuseumLoader } from "@/components/MuseumLoader";
 import { VolumeControl } from "@/components/Volume";
@@ -279,6 +279,32 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
   );
 }
 
+// Provinsi terpilih timbul dari papan seperti halaman buku pop-up: LAPIS salinan bentuknya ditumpuk dengan translateZ,
+// lapisan teratas kertas. Bentuk dan letaknya dibaca dari peta SVG (dirender server) yang sudah ada di DOM.
+const LAPIS = 10;
+type Shape = { slug: string; d: string; viewBox: string; place: CSSProperties; pin: CSSProperties; board: CSSProperties };
+
+function readShape(board: HTMLElement, slug: string): Shape | null {
+  const path = board.querySelector<SVGPathElement>(`[data-slug="${slug}"] path`);
+  const vb = path?.ownerSVGElement?.viewBox.baseVal;
+  if (!path || !vb) return null;
+  const b = path.getBBox();
+  const pad = 2; // ruang untuk garis tepi
+  const x = (v: number) => ((v - vb.x) / vb.width) * 100;
+  const y = (v: number) => ((v - vb.y) / vb.height) * 100;
+  const cx = x(b.x + b.width / 2);
+  const cy = y(b.y + b.height / 2);
+  return {
+    slug,
+    d: path.getAttribute("d") ?? "",
+    viewBox: `${b.x - pad} ${b.y - pad} ${b.width + 2 * pad} ${b.height + 2 * pad}`,
+    place: { left: `${x(b.x - pad)}%`, top: `${y(b.y - pad)}%`, width: `${((b.width + 2 * pad) / vb.width) * 100}%`, height: `${((b.height + 2 * pad) / vb.height) * 100}%` },
+    pin: { left: `${cx}%`, top: `${cy}%`, "--ax": `${-Math.min(88, Math.max(12, cx))}%` } as CSSProperties,
+    // menukik: papan digeser supaya provinsi ini ada di tengah, lalu diperbesar
+    board: { "--dx": `${50 - cx}%`, "--dy": `${50 - cy}%` } as CSSProperties,
+  };
+}
+
 function MapScreen(props: { map: ReactNode; slug: string; onPick: (slug: string) => void; onEnter: () => void; onBack: () => void; onPanel: OpenPanel }) {
   const { slug, onPick, onEnter } = props;
   const province = findProvince(slug)!;
@@ -286,10 +312,25 @@ function MapScreen(props: { map: ReactNode; slug: string; onPick: (slug: string)
   const seen = useSeen();
   const missions = useMissions();
   const seenHere = province.exhibits.filter((e) => seen?.includes(e.id)).length;
+  const board = useRef<HTMLDivElement>(null);
+  const [shape, setShape] = useState<Shape | null>(null);
+  const [landed, setLanded] = useState(false); // papan sudah mendarat: provinsi baru timbul setelahnya
+  const [diving, setDiving] = useState(false);
+
+  useLayoutEffect(() => {
+    if (board.current) setShape(readShape(board.current, slug));
+  }, [slug]);
+
   // Peta dirender di server; provinsi dikenali dari atribut data-slug pada elemen yang diklik.
   const slugOf = (target: EventTarget) => {
     const s = (target as Element).closest("[data-slug]")?.getAttribute("data-slug");
     return s && findProvince(s) ? s : null;
+  };
+  // Masuk: kamera menukik ke provinsi, lalu sapuan tinta (dipanggil dari animationend "selam").
+  const enter = () => {
+    if (diving) return;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return onEnter();
+    setDiving(true);
   };
 
   return (
@@ -305,22 +346,69 @@ function MapScreen(props: { map: ReactNode; slug: string; onPick: (slug: string)
       </header>
       <div className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto px-3 pb-4 sm:px-6 lg:grid-cols-[1fr_380px] lg:content-center-safe">
         <div
+          className="papan-ruang pt-12 lg:pt-6"
           onClick={(e) => {
             const s = slugOf(e.target);
-            if (s) onPick(s);
+            if (s && !diving) onPick(s);
           }}
-          onDoubleClick={(e) => slugOf(e.target) && onEnter()}
+          onDoubleClick={(e) => slugOf(e.target) && enter()}
           onKeyDown={(e) => {
             const s = slugOf(e.target);
             if (!s || (e.key !== "Enter" && e.key !== " ")) return;
             e.preventDefault();
-            if (s === slug) onEnter();
-            else onPick(s);
+            if (s === slug) enter();
+            else if (!diving) onPick(s);
+          }}
+          // papan sedikit condong mengikuti tetikus
+          onPointerMove={(e) => {
+            if (e.pointerType !== "mouse" || diving || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+            const r = e.currentTarget.getBoundingClientRect();
+            board.current?.style.setProperty("--ry", `${((e.clientX - r.left) / r.width - 0.5) * 8}deg`);
+            board.current?.style.setProperty("--rx", `${((e.clientY - r.top) / r.height - 0.5) * -6}deg`);
+          }}
+          onPointerLeave={() => {
+            board.current?.style.removeProperty("--ry");
+            board.current?.style.removeProperty("--rx");
           }}
         >
-          <MapStamps />
-          <style>{`.peta [data-slug="${slug}"] path{fill:var(--kertas);stroke:var(--bata);stroke-width:1.5;animation:denyut 1.1s ease-in-out infinite alternate}`}</style>
-          {props.map}
+          <div
+            ref={board}
+            className={`papan ${diving ? "selam" : ""}`}
+            style={shape?.board}
+            onAnimationEnd={(e) => {
+              if (e.target !== e.currentTarget) return;
+              if (e.animationName === "selam") onEnter();
+              else setLanded(true);
+            }}
+          >
+            <MapStamps />
+            {/* lubang tinta yang ditinggalkan provinsi yang timbul */}
+            <style>{`.peta [data-slug="${slug}"] path{fill:var(--sogan);stroke:var(--sogan)}`}</style>
+            {props.map}
+            {landed && shape?.slug === slug && (
+              <div key={slug} aria-hidden className="timbul">
+                {Array.from({ length: LAPIS }, (_, i) => (
+                  <svg key={i} viewBox={shape.viewBox} style={{ ...shape.place, "--z": i + 1 } as CSSProperties} data-slug={i === LAPIS - 1 ? slug : undefined}>
+                    <path d={shape.d} />
+                  </svg>
+                ))}
+                <div className="pin" style={shape.pin}>
+                  <p className="komik rounded-sm bg-kunyit px-2.5 py-0.5 font-display text-xl text-sogan [--bayang:var(--bata)] sm:text-2xl">{province.name}</p>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="mt-3 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-kertas/80">
+            {[
+              ["bg-kunyit", "Bisa dijelajahi"],
+              ["bg-kertas", "Dipilih"],
+              ["bg-bata", "Sudah dapat cap"],
+            ].map(([swatch, label]) => (
+              <span key={label} className="flex items-center gap-2">
+                <span aria-hidden className={`size-3.5 rounded-sm border border-kertas/60 ${swatch}`} /> {label}
+              </span>
+            ))}
+          </div>
         </div>
 
         <aside className="komik rounded-md bg-kertas p-5 text-sogan [--bayang:var(--bata)]">
@@ -354,7 +442,7 @@ function MapScreen(props: { map: ReactNode; slug: string; onPick: (slug: string)
             </p>
             <p className="mt-3 leading-relaxed">{province.summary}</p>
           </div>
-          <button type="button" onClick={onEnter} className={`${bigButton} mt-5 w-full`}>
+          <button type="button" onClick={enter} className={`${bigButton} mt-5 w-full`}>
             Masuk ruang pamer
           </button>
         </aside>

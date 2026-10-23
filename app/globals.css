@@ -133,8 +133,8 @@ body {
 .peta [data-slug]:hover path {
   fill: var(--kertas);
 }
-.peta [data-slug]:focus-visible {
-  outline: none; /* diganti garis tebal pada path di bawah */
+.peta [data-slug]:focus {
+  outline: none; /* diganti garis tebal pada path di bawah (hanya saat fokus keyboard) */
 }
 .peta [data-slug]:focus-visible path {
   stroke: var(--kertas);
@@ -343,12 +343,118 @@ body {
   }
 }
 
-/* Provinsi terpilih di peta berdenyut, jadi jelas "dipilih", bukan belum tersedia. Animasinya dipasang oleh <style> di Game. */
-@keyframes denyut {
-  to {
-    fill: var(--kertas-2);
-    stroke-width: 3.2;
+/* Momen peta: layar pilih ruang adalah papan permainan yang miring di atas meja. Papan terangkat setelah sapuan tinta,
+   provinsi menyala dari barat ke timur, lalu provinsi terpilih timbul seperti halaman buku pop-up dan meninggalkan
+   lubang tinta. "Masuk" menukik ke provinsi itu sebelum sapuan berikutnya. Semua lewat CSS 3D, tanpa WebGL. */
+.papan-ruang {
+  perspective: 1100px;
+  perspective-origin: 50% 25%;
+}
+/* Daftar fungsi transform sama di diam, masuk, dan menukik supaya tiap fungsi diinterpolasi sendiri. */
+.papan {
+  --miring: 30deg;
+  position: relative;
+  transform-style: preserve-3d;
+  /* sedikit diperkecil: perspektif melebarkan tepi bawah papan, jangan sampai menyusup ke bawah panel samping */
+  transform: rotateX(calc(var(--miring) + var(--rx, 0deg))) rotateY(var(--ry, 0deg)) scale(0.93) translate(0, 0);
+  transition: transform 600ms var(--lepas);
+  animation: papan-masuk 800ms 180ms var(--lepas) backwards;
+}
+@keyframes papan-masuk {
+  from {
+    transform: rotateX(76deg) rotateY(0deg) scale(0.8) translate(0, 10%);
   }
+}
+/* Menukik: makin cepat ke akhir, karena sapuan tinta langsung menyambung. */
+.papan.selam {
+  animation: selam 480ms cubic-bezier(0.55, 0, 0.9, 0.4) forwards;
+}
+@keyframes selam {
+  to {
+    transform: rotateX(56deg) rotateY(0deg) scale(3) translate(var(--dx), var(--dy));
+  }
+}
+.peta [data-slug] path {
+  animation: nyala 450ms calc(var(--i) * 14ms + 380ms) var(--lepas) backwards;
+}
+@keyframes nyala {
+  from {
+    fill: #3d342c;
+  }
+}
+
+/* Tumpukan lapisan bentuk provinsi; dinding gelap di bawah makin terang ke atas, tutupnya kertas bergaris tinta.
+   Hanya tutup yang bisa diklik (data-slug), supaya klik pada provinsi yang timbul tidak jatuh ke tetangganya. */
+.timbul {
+  --lapis: 10;
+  --langkah: clamp(1.4px, 0.3vw, 2.8px);
+  /* sedikit melampaui lalu mengendap: halaman pop-up yang tersentak tegak */
+  --pegas: cubic-bezier(0.34, 1.5, 0.64, 1);
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+.timbul svg {
+  position: absolute;
+  overflow: visible;
+  transform: translateZ(calc(var(--z) * var(--langkah)));
+  animation: angkat 560ms calc(var(--z) * 16ms) var(--pegas) backwards;
+}
+.timbul path {
+  fill: color-mix(in oklab, var(--kunyit), var(--sogan) calc(64% - var(--z) * 5%));
+  stroke: color-mix(in oklab, var(--kunyit), var(--sogan) calc(64% - var(--z) * 5%));
+  stroke-width: 0.8;
+  stroke-linejoin: round;
+}
+.timbul [data-slug] path {
+  fill: var(--kertas);
+  stroke: var(--sogan);
+  stroke-width: 1;
+  pointer-events: auto;
+  cursor: pointer;
+}
+@keyframes angkat {
+  from {
+    transform: translateZ(0);
+  }
+}
+/* Papan nama berdiri tegak di atas tutup: diputar balik sebesar kemiringan papan supaya menghadap pemain.
+   Melayang 10px di atas tutup: kalau menembus bidang tutup saat papan condong ke samping, Chrome tidak menggambarnya. */
+.pin {
+  position: absolute;
+  transform: translateZ(calc(var(--lapis) * var(--langkah) + 10px)) rotateY(calc(var(--ry, 0deg) * -1))
+    rotateX(calc((var(--miring) + var(--rx, 0deg)) * -1));
+  transition: transform 600ms var(--lepas);
+}
+.pin::before {
+  content: "";
+  position: absolute;
+  left: -1.5px;
+  bottom: -6px; /* tiang menjulur sampai ke tutup */
+  width: 3px;
+  height: 22px;
+  background: var(--sogan);
+  box-shadow: 0 0 0 1px var(--kertas);
+}
+.pin > p {
+  position: absolute;
+  bottom: 16px;
+  left: 0;
+  translate: var(--ax, -50%) 0; /* provinsi di tepi peta: papan nama bergeser ke dalam supaya tidak terpotong */
+  white-space: nowrap;
+  transform-origin: 50% 100%;
+  animation: pin-muncul 380ms calc(var(--lapis) * 16ms + 280ms) var(--pegas) backwards;
+}
+@keyframes pin-muncul {
+  from {
+    opacity: 0;
+    scale: 0.3;
+  }
+}
+.selam .pin {
+  opacity: 0;
+  transition: opacity 120ms;
 }
 
 /* Umpan balik kuis: jawaban salah bergoyang, jawaban benar berkilat kunyit. */
@@ -554,8 +660,16 @@ body {
   .balon-pop {
     animation-name: pudar;
   }
-  .peta [data-slug] path {
-    animation: none !important;
+  .papan {
+    animation-name: pudar;
+    transition: none;
+  }
+  .peta [data-slug] path,
+  .timbul svg {
+    animation: none;
+  }
+  .pin > p {
+    animation-name: pudar;
   }
   .tekan {
     transition: none;
