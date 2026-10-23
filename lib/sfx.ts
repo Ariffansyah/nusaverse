@@ -55,11 +55,14 @@ export const play = (name: Sfx, delay = 0) => void playUrl(sfxUrl(name), delay);
 // Nada alat musik yang dimainkan pemain: boleh bertumpuk seperti efek suara.
 export const playNote = (url: string) => void playUrl(url);
 
-// Rekaman koleksi (pertunjukan, alat musik): satu saja yang berbunyi, berhenti saat keterangannya ditutup.
+// Rekaman panjang (suara koleksi, narasi pemandu): satu saja yang berbunyi; yang baru menggantikan yang lama.
 let recording: Promise<AudioBufferSourceNode | undefined> | undefined;
 let recordingUrl: string | null = null;
 
-export function stopRecording() {
+// only: hentikan hanya kalau rekaman yang sedang berbunyi berasal dari folder itu (mis. kartu koleksi ditutup,
+// narasi pemandu jalan terus).
+export function stopRecording(only?: string) {
+  if (only && !recordingUrl?.startsWith(only)) return;
   void recording?.then((src) => src?.stop());
   recording = undefined;
   if (recordingUrl) {
@@ -70,7 +73,6 @@ export function stopRecording() {
 
 export function playRecording(url: string) {
   stopRecording();
-  stopGuide();
   const current = playUrl(url);
   recording = current;
   recordingUrl = url;
@@ -85,46 +87,6 @@ export function playRecording(url: string) {
     if (src) src.onended = done;
     else done();
   });
-}
-
-// Pemandu suara: naskah dibacakan suara bahasa Indonesia bawaan browser; tanpa suara itu tombolnya disembunyikan.
-// Dibacakan per kalimat karena Chrome memutus satu ucapan panjang di tengah jalan.
-const indonesianVoice = () =>
-  typeof speechSynthesis === "undefined" ? undefined : speechSynthesis.getVoices().find((v) => /^id([-_]|$)/i.test(v.lang));
-let guiding = false;
-let guideRun = 0; // ucapan dari pembacaan yang sudah dihentikan tidak boleh mengubah status
-
-export function stopGuide() {
-  guideRun++;
-  if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
-  if (guiding) {
-    guiding = false;
-    notify();
-  }
-}
-
-export function startGuide(text: string) {
-  const voice = indonesianVoice();
-  if (!voice || muted) return;
-  stopRecording();
-  stopGuide();
-  const run = guideRun;
-  const done = () => {
-    if (run !== guideRun) return;
-    guiding = false;
-    notify();
-  };
-  const sentences = text.split(/(?<=[.!?])\s+/);
-  sentences.forEach((sentence, i) => {
-    const u = new SpeechSynthesisUtterance(sentence);
-    u.voice = voice;
-    u.lang = voice.lang;
-    u.volume = volume;
-    if (i === sentences.length - 1) u.onend = u.onerror = done;
-    speechSynthesis.speak(u);
-  });
-  guiding = true;
-  notify();
 }
 
 // Pilihan bisu dan volume (0–1) diingat di perangkat ini.
@@ -163,10 +125,7 @@ function toggleMuted() {
     if (muted) localStorage.setItem(KEY, "mati");
     else localStorage.removeItem(KEY);
   } catch {}
-  if (muted) {
-    stopRecording();
-    stopGuide();
-  }
+  if (muted) stopRecording();
   notify();
   play("klik"); // umpan balik saat suara dinyalakan lagi (saat dibisukan, play() diam)
 }
@@ -175,15 +134,6 @@ const subscribe = (l: () => void) => {
   listeners.add(l);
   return () => void listeners.delete(l);
 };
-// Daftar suara browser dimuat belakangan (Chrome): ikuti event voiceschanged.
-const subscribeVoices = (l: () => void) => {
-  if (typeof speechSynthesis === "undefined") return () => {};
-  speechSynthesis.addEventListener("voiceschanged", l);
-  return () => speechSynthesis.removeEventListener("voiceschanged", l);
-};
-
 export const useMuted = () => [useSyncExternalStore(subscribe, () => muted, () => false), toggleMuted] as const;
 export const useVolume = () => useSyncExternalStore(subscribe, () => volume, () => 1);
 export const useRecording = () => useSyncExternalStore(subscribe, () => recordingUrl, () => null);
-export const useGuiding = () => useSyncExternalStore(subscribe, () => guiding, () => false);
-export const useGuideVoice = () => useSyncExternalStore(subscribeVoices, () => !!indonesianVoice(), () => false);

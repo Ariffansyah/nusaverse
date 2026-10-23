@@ -4345,3 +4345,24 @@ export const provinces: Province[] = [
 ];
 
 export const findProvince = (slug: string) => provinces.find((p) => p.slug === slug);
+
+// Naskah pemandu suara: hanya dari data provinsi yang juga tampil di panel Info, tanpa fakta tambahan.
+// Dibacakan jadi public/audio/pemandu/{slug}.mp3 oleh `pnpm guide`; jalankan ulang setelah data provinsi berubah.
+export function guideScript(p: Province) {
+  const food = p.exhibits.filter((e) => e.kind === "kuliner").map((e) => e.title);
+  return [
+    `Selamat datang di ruang pamer ${p.name}.`,
+    p.summary,
+    `Rumah adat: ${p.house.name}.`,
+    p.house.description,
+    `Pakaian adat: ${p.attire.name}.`,
+    p.attire.description,
+    `Tarian: ${p.dance.name}.`,
+    p.dance.description,
+    `Lagu daerah: ${p.music.song}, dengan alat musik ${p.music.instrument}.`,
+    food.length ? `Kuliner di ruang pamer ini: ${food.join(", ")}.` : "",
+    `Sejarah singkat. ${p.history}`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}

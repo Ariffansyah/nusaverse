@@ -61,6 +61,14 @@ export const exhibitSounds: Record<string, ExhibitSound> = {
   },
 };
 
+// Narasi pemandu (public/audio/pemandu/) dibacakan suara AI dari naskah guideScript, lewat `pnpm guide`.
+export const guideCredit: Credit = {
+  title: "Narasi pemandu tiap provinsi (suara AI)",
+  author: "Gemini TTS, Google",
+  license: "dibuat dengan AI",
+  url: "https://ai.google.dev/gemini-api/docs/speech-generation",
+};
+
 // Efek suara (lib/sfx.ts) dipilih dari paket audio Kenney (CC0), dikonversi ke public/audio/sfx/*.mp3.
 export const sfxCredits: Credit[] = ["Interface Sounds", "RPG Audio", "Impact Sounds", "Music Jingles"].map((title) => ({
   title,

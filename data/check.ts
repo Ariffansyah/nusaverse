@@ -1,9 +1,9 @@
 // pnpm check:data: gagal kalau data budaya tidak cocok dengan peta atau kuisnya rusak.
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import indonesia from "@svg-maps/indonesia";
 import { exhibitSounds } from "./assets.ts";
-import { provinces } from "./cultureData.ts";
+import { guideScript, provinces } from "./cultureData.ts";
 
 const mapIds = new Set(indonesia.locations.map((l: { id: string }) => l.id));
 const slugs = new Set<string>();
@@ -36,6 +36,13 @@ for (const [id, sound] of Object.entries(exhibitSounds)) {
     assert(existsSync(`public/audio/koleksi/${file}`), `suara ${id}: berkas ${file} tidak ada`);
   }
   if ("notes" in sound) assert(sound.notes.length <= 9, `suara ${id}: maksimal 9 nada (tombol 1-9)`);
+}
+
+// narasi pemandu harus ada dan dibacakan dari naskah terbaru (pnpm guide mencatatnya di data/pemandu.json)
+const guide: Record<string, string> = existsSync("data/pemandu.json") ? JSON.parse(readFileSync("data/pemandu.json", "utf8")) : {};
+for (const p of provinces) {
+  const ok = existsSync(`public/audio/pemandu/${p.slug}.mp3`) && guide[p.slug] === guideScript(p);
+  assert(ok, `${p.slug}: narasi pemandu belum dibuat atau naskahnya berubah, jalankan pnpm guide`);
 }
 
 console.log(`OK: ${provinces.length} provinsi valid, ${Object.keys(exhibitSounds).length} koleksi bersuara`);

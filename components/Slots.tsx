@@ -4,7 +4,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import { Suspense } from "react";
 import { AuthForms, LogoutButton, NameForm, StoryForm } from "@/components/Forms";
 import { PassportSync } from "@/components/Passport";
-import { exhibitSounds, props as museumProps, sfxCredits, shellCredits } from "@/data/assets";
+import { exhibitSounds, guideCredit, props as museumProps, sfxCredits, shellCredits } from "@/data/assets";
 import { findProvince, provinces, type Credit } from "@/data/cultureData";
 import { getViewer } from "@/lib/auth";
 import { supabasePublic, supabaseReady, supabaseServer } from "@/lib/supabase";
@@ -143,6 +143,7 @@ export function Credits() {
             credit: sound.credit,
           }))}
         />
+        <CreditList items={[{ label: "Pemandu suara", credit: guideCredit }]} />
       </section>
       <section className="mt-6">
         <h3 className="font-display text-xl font-semibold">Ruang museum dan peta</h3>

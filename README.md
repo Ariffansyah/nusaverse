@@ -56,7 +56,7 @@ The three.js code is only downloaded once you reach the map, so the menu loads f
 
 Some exhibits have sound. Opening the card of a performance plays a field recording: the Ciung Wulung bass angklung group from Kasepuhan Ciptagelar (Seren Taun photo, Jawa Barat), a Kecak performance (Bali), and a gambus from Kutai (shown on the Gambus Melayu exhibit in Kalimantan Barat, with the card saying where the recording is from). Two instruments can be played: the angklung model in Jawa Barat has eight notes from do to the high do, and the talempong in Sumatera Barat has five gongs. Use the buttons on the card or the number keys.
 
-The Pemandu button in the museum reads a short tour of the province out loud: summary, traditional house, attire, dance, regional song, food in the hall, and history. The text comes from the same province data as the info panel. It uses the browser's Indonesian voice, so the button only appears when the browser or device has one. Chrome and Edge on desktop usually do, and so do most phones.
+The Pemandu button in the museum (or the G key) plays a spoken tour of the province: summary, traditional house, attire, dance, regional song, food in the hall, and history. The text comes from the same province data as the info panel. The narration is generated once with Gemini TTS and stored as MP3 in `public/audio/pemandu/`, so it works in every browser. After changing province data, run `pnpm guide` again (it needs `GEMINI_API_KEY` in `.env.local` and ffmpeg). It only regenerates provinces whose text changed, and `pnpm check:data` fails if a narration is missing or out of date.
 
 Sasando, sape', kolintang, tifa, and taganing have no sound yet because no openly licensed recordings were found. To add one, put the file in `public/audio/koleksi/` and add an entry to `exhibitSounds` in `data/assets.ts`. `pnpm check:data` fails if a file is missing.
 
@@ -195,6 +195,7 @@ Two limits to know about on Cloudflare: vinext marks `cacheComponents` support a
 | `pnpm deploy:vinext` | Build and deploy to Cloudflare |
 | `pnpm check:data` | Validate province data against the map and quiz answers |
 | `pnpm assets` | Download missing models, photos, textures, and HDRI |
+| `pnpm guide` | Generate the voice guide MP3s with Gemini TTS |
 | `pnpm lint` | ESLint |
 
 `pnpm assets` skips files that already exist. Models come from Sketchfab and need `SKETCHFAB_TOKEN` in `.env.local`.
@@ -215,4 +216,4 @@ proxy.ts          refreshes the Supabase session cookie
 
 ## Credits
 
-3D models are from Sketchfab, photos from Wikimedia Commons, exhibit sound recordings from Freesound and Wikimedia Commons, textures, HDRI and furniture from Poly Haven, sound effects from Kenney, and the province map from `@svg-maps/indonesia`. Each item's author and license is listed in the "Kredit aset" panel in the game.
+3D models are from Sketchfab, photos from Wikimedia Commons, exhibit sound recordings from Freesound and Wikimedia Commons, textures, HDRI and furniture from Poly Haven, sound effects from Kenney, and the province map from `@svg-maps/indonesia`. The voice guide narration is AI generated with Gemini TTS. Each item's author and license is listed in the "Kredit aset" panel in the game.

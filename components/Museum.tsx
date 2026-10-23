@@ -29,7 +29,7 @@ import { ComicPass } from "@/components/ComicPass";
 import { exhibitSounds, furniture, polyhaven, type ExhibitSound } from "@/data/assets";
 import { kinds, type Exhibit, type Island } from "@/data/cultureData";
 import { finishMission, markSeen, useMissions, useSeen } from "@/lib/passport";
-import { play, playNote, playRecording, stopRecording, useGuideVoice, useRecording } from "@/lib/sfx";
+import { play, playNote, playRecording, stopRecording, useRecording } from "@/lib/sfx";
 import { shuffle } from "@/lib/shuffle";
 
 // Aula galeri: lorong berkubah tong (barrel vault) dengan rusuk di tiap petak, berujung apsis setengah lingkaran
@@ -214,13 +214,12 @@ export default function Museum(props: {
   const seen = spots.filter((s) => seenIds?.includes(s.exhibit.id)).length;
   const target = found < targets.length ? spots[targets[found]] : null;
   const { active: loading, progress } = useProgress();
-  const guideVoice = useGuideVoice();
 
   // Satu pintu untuk membuka keterangan koleksi: dari tur, klik, atau bidikan crosshair.
   // browsing: dibuka lewat tombol tur ◀ ▶, tidak dihitung sebagai menemukan sasaran misi.
   const select = (i: number | null, browsing = false) => {
     setSelected(i);
-    stopRecording();
+    stopRecording("/audio/koleksi/");
     if (i === null) return;
     const sound = exhibitSounds[spots[i].exhibit.id];
     if (sound && "clip" in sound) playRecording(soundUrl(sound.clip));
@@ -244,7 +243,7 @@ export default function Museum(props: {
     if (sound && "notes" in sound && sound.notes[n]) playNote(soundUrl(sound.notes[n].file));
   });
 
-  useEffect(() => stopRecording, []);
+  useEffect(() => () => stopRecording("/audio/koleksi/"), []);
   const pause = useEffectEvent(() => props.onPause());
 
   useEffect(() => {
@@ -524,7 +523,7 @@ export default function Museum(props: {
       </nav>
 
       <p className="pointer-events-none absolute right-3 bottom-3 hidden max-w-xs rounded-md bg-malam/80 px-3 py-2 text-xs leading-relaxed text-kertas pointer-fine:block">
-        W A S D jalan · Shift lari · E lihat koleksi · H petunjuk misi · C kursor bebas · tahan klik kanan untuk zoom · I info · K kuis{guideVoice && " · G pemandu suara"} · Esc menu
+        W A S D jalan · Shift lari · E lihat koleksi · H petunjuk misi · C kursor bebas · tahan klik kanan untuk zoom · I info · K kuis · G pemandu suara · Esc menu
       </p>
 
       <div className="absolute right-3 bottom-3 hidden grid-cols-3 gap-1.5 pointer-coarse:grid" aria-label="Kontrol berjalan">
