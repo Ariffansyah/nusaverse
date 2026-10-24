@@ -2,6 +2,7 @@
 
 import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
 import { Center, ContactShadows, Environment, useGLTF, useProgress, useTexture } from "@react-three/drei";
+import Image from "next/image";
 import { Component, Suspense, useEffect, useEffectEvent, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   BackSide,
@@ -205,6 +206,9 @@ export default function Museum(props: {
   const [aim, setAim] = useState<number | null>(null);
   const [locked, setLocked] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
+  const [zoomed, setZoomed] = useState(false); // foto koleksi diperbesar dalam popup
+  const zoomRef = useRef<HTMLDialogElement>(null);
+  const zoomUnlocked = useRef(false); // kunci kursor dilepas oleh popup foto: kunci lagi waktu ditutup
   const [targets, setTargets] = useState(() => pickTargets(spots));
   const [found, setFound] = useState(0); // jumlah sasaran misi yang sudah ditemukan, berurutan
   const [hint, setHint] = useState(false);
@@ -219,6 +223,7 @@ export default function Museum(props: {
   // browsing: dibuka lewat tombol tur ◀ ▶, tidak dihitung sebagai menemukan sasaran misi.
   const select = (i: number | null, browsing = false) => {
     setSelected(i);
+    setZoomed(i !== null && !browsing && spots[i].exhibit.source.type === "commons");
     stopRecording("/audio/koleksi/");
     if (i === null) return;
     const sound = exhibitSounds[spots[i].exhibit.id];
@@ -293,6 +298,18 @@ export default function Museum(props: {
     };
   }, []);
 
+  // Popup foto butuh kursor bebas; freeing: lepasnya kunci tidak membuka menu jeda.
+  const unlockForZoom = () => {
+    freeing.current = true;
+    zoomUnlocked.current = true;
+    document.exitPointerLock();
+  };
+  useEffect(() => {
+    if (!zoomed) return;
+    input.current.keys.clear();
+    if (document.pointerLockElement === rootRef.current) unlockForZoom();
+  }, [zoomed]);
+
   // Mode first-person: klik mengunci kursor, gerakan mouse langsung memutar kepala.
   useEffect(() => {
     const root = rootRef.current!;
@@ -307,6 +324,8 @@ export default function Museum(props: {
     const change = () => {
       const on = document.pointerLockElement === root;
       setLocked(on);
+      // klik foto dengan kursor bebas meminta kunci dulu; kunci itu baru datang setelah popup terbuka
+      if (on && zoomRef.current?.open) return unlockForZoom();
       if (on) {
         freeing.current = false;
         return;
@@ -543,6 +562,18 @@ export default function Museum(props: {
         </MoveButton>
       </div>
 
+      {zoomed && shown && (
+        <PhotoZoom
+          exhibit={shown}
+          dialogRef={zoomRef}
+          onClose={() => {
+            setZoomed(false);
+            if (zoomUnlocked.current) lockPointer(rootRef.current!); // berhasil kalau ditutup dengan klik
+            zoomUnlocked.current = false;
+          }}
+        />
+      )}
+
       {loading && (
         <div role="status" className="halftone absolute inset-0 grid place-items-center bg-malam px-6 text-center text-kertas">
           <div className="max-w-md">
@@ -557,6 +588,38 @@ export default function Museum(props: {
         </div>
       )}
     </div>
+  );
+}
+
+// Foto koleksi diperbesar: klik di mana saja atau Esc menutup. Tombol berhenti di sini supaya pintasan game dan
+// gerak pemain (keydown di window) tidak jalan, dan Esc tidak membuka menu jeda di atasnya.
+function PhotoZoom({ exhibit, dialogRef, onClose }: { exhibit: Exhibit; dialogRef: React.RefObject<HTMLDialogElement | null>; onClose: () => void }) {
+  useEffect(() => dialogRef.current?.showModal(), [dialogRef]);
+  return (
+    <dialog
+      ref={dialogRef}
+      tabIndex={-1}
+      aria-label={exhibit.title}
+      onClose={onClose}
+      onClick={() => dialogRef.current?.close()}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key !== "Escape") return;
+        e.preventDefault();
+        dialogRef.current?.close();
+      }}
+      className="panel-buka m-auto max-h-none max-w-none cursor-zoom-out overflow-visible bg-transparent p-0 outline-none backdrop:bg-black/85"
+    >
+      <div className="relative h-[80dvh] w-[calc(100vw-1.5rem)]">
+        <Image src={`/images/${exhibit.id}.jpg`} alt={exhibit.title} fill sizes="100vw" className="object-contain" />
+      </div>
+      <div className="mt-3 flex items-center justify-center gap-3">
+        <p className="komik rounded-sm bg-kertas px-3 py-1.5 font-display text-xl text-sogan">{exhibit.title}</p>
+        <button type="button" className="tekan rounded-md bg-kertas px-3 py-2 text-sm font-bold text-sogan hover:bg-kunyit">
+          Tutup
+        </button>
+      </div>
+    </dialog>
   );
 }
 
