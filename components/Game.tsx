@@ -11,11 +11,12 @@ import { useMissions, usePassport, useSeen } from "@/lib/passport";
 import { play, playRecording, stopRecording, useRecording } from "@/lib/sfx";
 
 type Screen = "menu" | "map" | "museum";
-type PanelId = "jeda" | "info" | "kuis" | "tebak" | "cerita" | "paspor" | "peringkat" | "akun" | "kredit";
+type PanelId = "jeda" | "pindah" | "info" | "kuis" | "tebak" | "cerita" | "paspor" | "peringkat" | "akun" | "kredit";
 type OpenPanel = (id: PanelId) => void;
 
 const panelTitle: Record<PanelId, string> = {
-  jeda: "Menu",
+  jeda: "Jeda",
+  pindah: "Pindah ruang pamer",
   info: "Tentang provinsi",
   kuis: "Kuis",
   tebak: "Tebak asal",
@@ -27,12 +28,12 @@ const panelTitle: Record<PanelId, string> = {
 };
 
 // Pintasan keyboard di ruang pamer; berguna saat kursor terkunci dan tombol HUD tidak bisa diklik.
-const museumKeys: Record<string, PanelId> = { escape: "jeda", m: "jeda", i: "info", k: "kuis", p: "paspor" };
+const museumKeys: Record<string, PanelId> = { escape: "jeda", m: "jeda", t: "pindah", i: "info", k: "kuis", p: "paspor" };
 
 // Tombol HUD: kertas bergaris tinta, terbaca di atas adegan 3D. Tombol utama: merah dengan bayangan kunyit, satu-satunya aksi besar per layar.
 const hudButton = "tekan flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md bg-kertas px-3 py-2 text-sm font-bold text-sogan hover:bg-kunyit";
 const bigButton = "tekan rounded-md bg-bata px-5 py-3 font-display text-2xl text-white [--bayang:var(--kunyit)] hover:bg-sogan";
-const menuItem = "rounded-md px-4 py-3 text-left text-lg font-medium hover:bg-kunyit";
+const kbd = "rounded border-2 border-current px-1.5 font-sans text-xs font-bold";
 
 // Panah atas/bawah memindah fokus antar tombol menu, seperti menu game.
 function arrowNav(e: KeyboardEvent<HTMLElement>) {
@@ -91,7 +92,7 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
         if (key === "escape") {
           e.preventDefault();
           setPanel(null);
-        }
+        } else if (panel === "jeda" && museumKeys[key]) setPanel(museumKeys[key]); // pintasan yang tertera di menu jeda
         return;
       }
       if (screen === "museum" && key === "g") return onGuideKey();
@@ -180,11 +181,16 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
             onPause={() => setPanel((open) => open ?? "jeda")}
           />
           <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-3">
-            {/* kotak narasi kuning ala komik */}
-            <div className="komik turun rounded-sm bg-kunyit px-3 py-1.5 text-sogan">
-              <p className="text-xs font-bold">Ruang pamer</p>
-              <p className="font-display text-2xl leading-tight">{province.name}</p>
-            </div>
+            {/* kotak narasi kuning ala komik; diklik untuk pindah ruang */}
+            <button
+              type="button"
+              onClick={() => setPanel("pindah")}
+              aria-label={`Ruang pamer ${province.name}. Pindah ruang`}
+              className="komik turun pointer-events-auto rounded-sm bg-kunyit px-3 py-1.5 text-left text-sogan hover:bg-kertas"
+            >
+              <span className="block text-xs font-bold">Ruang pamer · ganti ▾</span>
+              <span className="block font-display text-2xl leading-tight">{province.name}</span>
+            </button>
             <div className="pointer-events-auto flex gap-1.5">
               <button type="button" onClick={toggleGuide} aria-pressed={guiding} className={hudButton}>
                 {guiding ? "■ Hentikan" : "▶ Pemandu"}
@@ -212,44 +218,28 @@ export function Game(slots: { map: ReactNode; account: ReactNode; leaderboard: R
       {panel && (
         <Panel key={panel} title={panel === "kuis" ? `Kuis ${province.name}` : panelTitle[panel]} onClose={() => setPanel(null)}>
           {panel === "jeda" && (
-            <nav aria-label="Menu jeda" className="grid gap-1 sm:grid-cols-2" onKeyDown={arrowNav}>
-              <button type="button" data-autofocus onClick={() => setPanel(null)} className="tekan rounded-md bg-bata px-4 py-3 text-left font-display text-2xl text-white hover:bg-sogan">
-                Lanjutkan
-              </button>
-              {(
-                [
-                  ["info", "Tentang provinsi"],
-                  ["kuis", "Kuis"],
-                  ["tebak", "Tebak asal"],
-                  ["cerita", "Cerita warga"],
-                  ["paspor", "Paspor budaya"],
-                  ["peringkat", "Peringkat"],
-                  ["akun", "Akun"],
-                ] as const
-              ).map(([id, label]) => (
-                <button key={id} type="button" onClick={() => setPanel(id)} className={menuItem}>
-                  {label}
-                </button>
-              ))}
-              {fullscreen.supported && (
-                <button type="button" onClick={fullscreen.toggle} className={menuItem}>
-                  {fullscreen.on ? "Keluar layar penuh" : "Layar penuh"}
-                </button>
-              )}
-              <button type="button" onClick={() => go("map")} className={menuItem}>
-                Pilih ruang lain
-              </button>
-              <button type="button" onClick={() => go("menu")} className={menuItem}>
-                Menu utama
-              </button>
-            </nav>
-          )}
-          {/* di luar <nav>: panah atas/bawah di sana memindah fokus, jadi akan menelan tombol panah penggeser */}
-          {panel === "jeda" && (
-            <VolumeControl
-              className="mt-4 border-t-2 border-sogan pt-4 accent-bata"
-              buttonClass="tekan rounded-md bg-kertas px-3 py-2 text-sm font-bold hover:bg-kunyit"
+            <PauseMenu
+              province={province}
+              fullscreen={fullscreen}
+              onResume={() => setPanel(null)}
+              onPanel={setPanel}
+              onMap={() => go("map")}
+              onHome={() => go("menu")}
             />
+          )}
+          {panel === "pindah" && (
+            <>
+              <p className="mb-4 text-sogan-2">Pilih provinsi untuk langsung masuk ke ruang pamernya.</p>
+              <ProvinceList
+                slug={slug}
+                className="grid gap-4 sm:grid-cols-2"
+                onPick={(s) => {
+                  if (s === slug) return setPanel(null);
+                  setSlug(s);
+                  go("museum");
+                }}
+              />
+            </>
           )}
           {panel === "info" && <ProvinceInfo province={province} />}
           {panel === "kuis" && <Quiz slug={province.slug} name={province.name} questions={province.quiz} />}
@@ -412,28 +402,7 @@ function MapScreen(props: { map: ReactNode; slug: string; onPick: (slug: string)
         </div>
 
         <aside className="komik rounded-md bg-kertas p-5 text-sogan [--bayang:var(--bata)]">
-          <div className="grid gap-3 lg:max-h-[42vh] lg:overflow-y-auto" aria-label="Daftar ruang pamer">
-            {islands.map((island) => (
-              <div key={island} role="group" aria-label={island}>
-                <p className="text-xs font-bold text-sogan-2">{island}</p>
-                <div className="mt-1 flex flex-wrap gap-1.5">
-                  {provinces
-                    .filter((p) => p.island === island)
-                    .map((p) => (
-                      <button
-                        key={p.slug}
-                        type="button"
-                        aria-pressed={p.slug === slug}
-                        onClick={() => onPick(p.slug)}
-                        className={`rounded-md border-2 border-sogan px-3 py-2 text-sm font-bold ${p.slug === slug ? "bg-sogan text-kunyit" : "bg-kertas hover:bg-kunyit"}`}
-                      >
-                        {p.name}
-                      </button>
-                    ))}
-                </div>
-              </div>
-            ))}
-          </div>
+          <ProvinceList slug={slug} onPick={onPick} className="grid gap-3 lg:max-h-[42vh] lg:overflow-y-auto" />
           <div key={slug} className="ganti">
             <h2 className="mt-5 font-display text-4xl">{province.name}</h2>
             <p className="mt-1 text-sm text-sogan-2">
@@ -448,6 +417,147 @@ function MapScreen(props: { map: ReactNode; slug: string; onPick: (slug: string)
         </aside>
       </div>
     </section>
+  );
+}
+
+// Daftar provinsi per pulau: di layar peta dan di popup pindah ruang.
+function ProvinceList({ slug, onPick, className }: { slug: string; onPick: (slug: string) => void; className: string }) {
+  const stamps = usePassport();
+  return (
+    <div className={className} aria-label="Daftar ruang pamer">
+      {islands.map((island) => (
+        <div key={island} role="group" aria-label={island}>
+          <p className="text-xs font-bold text-sogan-2">{island}</p>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {provinces
+              .filter((p) => p.island === island)
+              .map((p) => (
+                <button
+                  key={p.slug}
+                  type="button"
+                  aria-pressed={p.slug === slug}
+                  onClick={() => onPick(p.slug)}
+                  className={`rounded-md border-2 border-sogan px-3 py-2 text-sm font-bold ${p.slug === slug ? "bg-sogan text-kunyit" : "bg-kertas hover:bg-kunyit"}`}
+                >
+                  {p.name}
+                  {stamps?.includes(p.slug) && (
+                    <span className="ml-1">
+                      ✓<span className="sr-only"> sudah dapat cap</span>
+                    </span>
+                  )}
+                </button>
+              ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const pauseItems = [
+  {
+    group: "Ruang ini",
+    items: [
+      ["info", "Tentang provinsi", "Rumah adat, tarian, musik", "I"],
+      ["kuis", "Kuis", "Jawab benar, dapat cap", "K"],
+      ["cerita", "Cerita warga", "Kisah dari penduduknya", ""],
+    ],
+  },
+  {
+    group: "Petualanganmu",
+    items: [
+      ["tebak", "Tebak asal", "Koleksi ini dari mana?", ""],
+      ["paspor", "Paspor budaya", "Cap yang sudah terkumpul", "P"],
+      ["peringkat", "Peringkat", "Penjelajah teratas", ""],
+      ["akun", "Akun", "Simpan kemajuanmu", ""],
+    ],
+  },
+] as const;
+
+// Menu jeda: kartu "kamu di sini" dengan kemajuan ruang ini dan aksi utama di kiri, menu per tema di kanan.
+function PauseMenu(props: {
+  province: Province;
+  fullscreen: ReturnType<typeof useFullscreen>;
+  onResume: () => void;
+  onPanel: OpenPanel;
+  onMap: () => void;
+  onHome: () => void;
+}) {
+  const { province, fullscreen } = props;
+  const stamps = usePassport();
+  const seen = useSeen();
+  const missions = useMissions();
+  const seenHere = province.exhibits.filter((e) => seen?.includes(e.id)).length;
+  const small = "tekan rounded-md bg-kertas px-3 py-2 text-sm font-bold hover:bg-kunyit";
+  const chip = (done: boolean | undefined, yes: string, no: string) => (
+    <span className={`rounded-sm border-2 px-2 py-0.5 text-xs font-bold ${done ? "border-bata bg-bata text-white" : "border-kertas/40 text-kertas/80"}`}>{done ? yes : no}</span>
+  );
+  return (
+    <>
+      <nav aria-label="Menu jeda" className="grid gap-5 md:grid-cols-[16rem_1fr]" onKeyDown={arrowNav}>
+        <div className="flex flex-col gap-3">
+          <div className="komik halftone -rotate-1 rounded-md bg-sogan p-4 text-kertas [--bayang:var(--kunyit)]">
+            <p className="text-xs font-bold text-kunyit">Kamu sedang di</p>
+            <p className="judul-komik font-display text-4xl leading-none">{province.name}</p>
+            <p className="mt-1 text-sm text-kertas/80">{province.island}</p>
+            <p className="mt-3 text-xs font-bold">
+              {seenHere}/{province.exhibits.length} koleksi dilihat
+            </p>
+            <div aria-hidden className="mt-1 h-2.5 overflow-hidden rounded-full border-2 border-kertas/40">
+              <div className="h-full bg-kunyit" style={{ width: `${(seenHere / Math.max(1, province.exhibits.length)) * 100}%` }} />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {chip(stamps?.includes(province.slug), "Cap didapat", "Belum ada cap")}
+              {chip(missions?.includes(province.slug), "★ Misi selesai", "Misi belum selesai")}
+            </div>
+          </div>
+          <button type="button" data-autofocus onClick={props.onResume} className={`${bigButton} flex items-center justify-between`}>
+            Lanjutkan <kbd className={kbd}>Esc</kbd>
+          </button>
+          <button
+            type="button"
+            onClick={() => props.onPanel("pindah")}
+            className="tekan flex items-center justify-between rounded-md bg-kunyit px-5 py-3 font-display text-2xl text-sogan [--bayang:var(--bata)] hover:bg-kertas-2"
+          >
+            Pindah ruang <kbd className={kbd}>T</kbd>
+          </button>
+        </div>
+
+        <div className="urut grid content-start gap-4">
+          {pauseItems.map(({ group, items }) => (
+            <div key={group}>
+              <p className="mb-1.5 text-xs font-bold text-sogan-2">{group}</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {items.map(([id, label, hint, key]) => (
+                  <button key={id} type="button" onClick={() => props.onPanel(id)} className="tekan flex items-start justify-between gap-3 rounded-md bg-kertas px-4 py-2.5 text-left hover:bg-kunyit">
+                    <span>
+                      <span className="block font-bold">{label}</span>
+                      <span className="block text-sm text-sogan-2">{hint}</span>
+                    </span>
+                    {key && <kbd className={kbd}>{key}</kbd>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          <div className="flex flex-wrap gap-2 border-t-2 border-dashed border-sogan/40 pt-4">
+            {fullscreen.supported && (
+              <button type="button" onClick={fullscreen.toggle} className={small}>
+                {fullscreen.on ? "Keluar layar penuh" : "Layar penuh"}
+              </button>
+            )}
+            <button type="button" onClick={props.onMap} className={small}>
+              Peta Indonesia
+            </button>
+            <button type="button" onClick={props.onHome} className={small}>
+              Menu utama
+            </button>
+          </div>
+        </div>
+      </nav>
+      {/* di luar <nav>: panah atas/bawah di sana memindah fokus, jadi akan menelan tombol panah penggeser */}
+      <VolumeControl className="mt-5 border-t-2 border-sogan pt-4 accent-bata" buttonClass={small} />
+    </>
   );
 }
 

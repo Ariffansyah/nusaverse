@@ -523,7 +523,7 @@ export default function Museum(props: {
       </nav>
 
       <p className="pointer-events-none absolute right-3 bottom-3 hidden max-w-xs rounded-md bg-malam/80 px-3 py-2 text-xs leading-relaxed text-kertas pointer-fine:block">
-        W A S D jalan · Shift lari · E lihat koleksi · H petunjuk misi · C kursor bebas · tahan klik kanan untuk zoom · I info · K kuis · G pemandu suara · Esc menu
+        W A S D jalan · Shift lari · E lihat koleksi · H petunjuk misi · C kursor bebas · tahan klik kanan untuk zoom · I info · K kuis · G pemandu suara · T pindah ruang · Esc menu
       </p>
 
       <div className="absolute right-3 bottom-3 hidden grid-cols-3 gap-1.5 pointer-coarse:grid" aria-label="Kontrol berjalan">
