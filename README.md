@@ -8,7 +8,7 @@ Live at [nusaverse.naivaratech.com](https://nusaverse.naivaratech.com).
 
 [![NusaVerse demo](docs/demo.webp)](docs/demo.mp4)
 
-A 40 second walkthrough, from the main menu to a new stamp in the passport. The full quality version is [docs/demo.mp4](docs/demo.mp4).
+A one minute walkthrough: the main menu, the map, the Jawa Barat hall (the angklung, a food photo, the pause menu and the room switcher), the quiz, and the new stamp in the passport. The full quality version is [docs/demo.mp4](docs/demo.mp4).
 
 ## How a visit goes
 
@@ -20,7 +20,7 @@ The map is a paper board tilted in 3D that leans a little toward your mouse. Cli
 
 ### 2. Walk the museum
 
-Every province has its own hall, built with React Three Fiber. It is a barrel vaulted corridor that ends in a half dome, with the main exhibit standing in the middle of the apse. Photos hang on the walls and 3D models stand on pedestals along the way, each with a spotlight and a plaque. Carpet and trim colors change per island, and the whole scene is drawn in a comic book style with ink outlines and halftone shading.
+Every province has its own hall, built with React Three Fiber. It is a barrel vaulted corridor that ends in a half dome, with the main exhibit standing in the middle of the apse. Photos hang on the walls and 3D models stand on pedestals along the way, each under a spotlight. Carpet and trim colors change per island. The hall and the models are drawn in a comic book style with ink outlines and halftone shading, but the photos keep their real colors inside an inked frame, so you can see what a dish or a costume actually looks like. There are no text plaques in the room. You aim at an exhibit to see its name and press E to read about it.
 
 ![Museum hall for Jawa Barat with the curator mission card](docs/screenshots/museum.webp)
 
@@ -29,6 +29,8 @@ Each hall also has a curator mission. You get a clue for one exhibit at a time (
 Some exhibits make sound. The angklung in Jawa Barat plays eight notes and the talempong in Sumatera Barat plays five, from the card buttons or the number keys. Performance photos such as the Seren Taun angklung procession, Kecak, and Kutai gambus play a field recording when you open them. The Pemandu button (or G) plays a spoken tour of the province.
 
 ![Playing the angklung from its exhibit card](docs/screenshots/museum-koleksi.webp)
+
+![The Seblak photo in its frame, shown in its real colors](docs/screenshots/museum-foto.webp)
 
 | Input | Action |
 | --- | --- |
@@ -42,9 +44,18 @@ Some exhibits make sound. The angklung in Jawa Barat plays eight notes and the t
 | G | Start or stop the voice guide |
 | 1 to 9 | Play the notes of the instrument whose card is open |
 | I, K, P | Province info, quiz, passport |
+| T | Switch to another province's hall |
 | Esc or M | Pause menu |
 
 On a touch screen you drag to look and hold the on-screen arrows to walk. The arrows at the bottom left jump from one exhibit to the next, though exhibits opened that way do not count for the mission. Pedestals, benches, and plants block your way like real furniture.
+
+The pause menu (Esc, M, or the Menu button) shows where you are: the province, how many of its exhibits you have seen, and whether you have its stamp and curator star. Next to that are the big Lanjutkan and Pindah ruang buttons, and cards for everything else, grouped into this room and your progress.
+
+![Pause menu](docs/screenshots/jeda.webp)
+
+Pindah ruang (T, or the yellow province box at the top left) lists every province by island. Pick one and you go straight into its hall without going back to the map. Stamped provinces have a check mark.
+
+![Room switcher](docs/screenshots/pindah.webp)
 
 ### 3. Take the quiz
 
@@ -73,6 +84,24 @@ Accounts use Supabase Auth with email and password. Signing in uploads the stamp
 Signed in players can also write a story about a province (a title of 3 to 80 characters and a body of 20 to 2000). Stories show up in that province's "Cerita warga" panel only after a curator approves them, and each account can have at most 5 waiting for review.
 
 `/admin` is the curator room, open only to accounts with the admin role. It has totals, the moderation queue, stamps per province, and the 50 newest users with a button to grant or remove the curator role. Admins cannot change their own role. Access is enforced by row level security in the database, not just by the app.
+
+## How it fits the UINIC 8.0 theme
+
+NusaVerse is our entry for the UINIC 8.0 Web Development Competition, under the theme "Engineering Interconnected Web Solutions to Empower Digital Ecosystems" and the Sosial Budaya subtheme (SDG targets 4.7 on education for cultural diversity and 11.4 on safeguarding cultural heritage).
+
+The ecosystem has four kinds of participants, and data moves between them:
+
+- **Players** explore the halls, take quizzes, and collect stamps. Progress works without an account and moves to an account when they sign in.
+- **Contributors** write stories about their province.
+- **Curators** approve or reject those stories in `/admin` before anyone else sees them.
+- **Open content sources** supply the collection. `pnpm assets` pulls models, photos, textures, and HDRI from the Sketchfab, Wikimedia Commons, and Poly Haven APIs, and every item keeps its author and license.
+
+On the technical side, the theme asks for interoperable data, a relational database, security, and availability under load:
+
+- Accounts, stamps, and stories live in Postgres (Supabase). Row level security decides who can read and write each row, and `check` constraints validate province slugs and story lengths in the database as well as in the forms.
+- Public data such as the leaderboard and approved stories is cached with `"use cache"`, and the Cloudflare build stores that cache in KV, so a traffic spike does not turn into a spike of database queries.
+- The app runs as one Cloudflare Worker. The museum, quiz, and passport run in the browser and keep progress on the device, so playing does not need the database.
+- Panels are native `<dialog>` elements, everything works with a keyboard, and motion stops when the system asks for reduced motion.
 
 ## The main menu and the rest
 
