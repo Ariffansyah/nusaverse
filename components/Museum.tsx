@@ -25,7 +25,7 @@ import {
   type PerspectiveCamera,
 } from "three";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
-import { ComicPass } from "@/components/ComicPass";
+import { ComicPass, unfiltered } from "@/components/ComicPass";
 import { exhibitSounds, furniture, polyhaven, type ExhibitSound } from "@/data/assets";
 import { kinds, type Exhibit, type Island } from "@/data/cultureData";
 import { finishMission, markSeen, useMissions, useSeen } from "@/lib/passport";
@@ -933,7 +933,7 @@ function Banner({ title, z }: { title: string; z: number }) {
         <boxGeometry args={[6.5, 1.2, 0.04]} />
         <meshStandardMaterial color={INK} />
       </mesh>
-      <Plaque title={title} position={[0, bottom - 0.55 - top, 0]} width={6.4} height={1.1} titleOnly />
+      <Plaque title={title} position={[0, bottom - 0.55 - top, 0]} width={6.4} height={1.1} />
     </group>
   );
 }
@@ -1015,21 +1015,6 @@ function ExhibitView({ spot, onSelect, pickRef }: { spot: Spot; onSelect: (i: nu
               </Safe>
             </group>
           </group>
-          {stage ? (
-            // podium keterangan di depan-kanan alas, menyerong ke arah pengunjung, tidak menghalangi pandangan.
-            // Panggung lorong juga memakai podium (dinding di sampingnya tertutup tiang lorong), di luar bentang bangunan 4,2 m
-            // supaya tidak menutupinya dari titik tur.
-            <group position={isCenter ? [4.4, 0, 3.4] : [2.7, 0, 2.2]} rotation-y={-0.6}>
-              <mesh position={[0, 0.42, 0.12]}>
-                <boxGeometry args={[0.08, 0.84, 0.08]} />
-                <meshStandardMaterial color="#3f2614" />
-              </mesh>
-              <Plaque title={exhibit.title} body={exhibit.description} position={[0, 1.0, 0]} rotationX={-0.5} width={1.6} height={0.8} />
-            </group>
-          ) : (
-            // di dinding belakang, di samping alas
-            <Plaque title={exhibit.title} body={exhibit.description} position={[1.5, 1.5, Math.abs(spot.x) - W / 2 + 0.03]} width={1.2} height={0.6} />
-          )}
         </>
       )}
     </group>
@@ -1105,7 +1090,7 @@ const Missing = () => (
 function Photo({ exhibit, events, target }: { exhibit: Exhibit; events: object; target: (g: Group | null) => void }) {
   const tex = useTexture(`/images/${exhibit.id}.jpg`);
   const img = tex.image as HTMLImageElement;
-  // lebar maks 2,8 m: plakat di sampingnya harus berhenti sebelum tiang lorong (3 m dari tengah koleksi)
+  // lebar maks 2,8 m: bingkai harus berhenti sebelum tiang lorong (3 m dari tengah koleksi)
   const w = Math.min((exhibit.height * img.width) / img.height, 2.8);
   const h = (w * img.height) / img.width;
   return (
@@ -1116,9 +1101,9 @@ function Photo({ exhibit, events, target }: { exhibit: Exhibit; events: object; 
       </mesh>
       <mesh position-z={0.06}>
         <planeGeometry args={[w, h]} />
-        <meshStandardMaterial map={tex} roughness={0.85} />
+        {/* foto tampil asli, tidak ikut filter komik; bingkainya tetap */}
+        <meshStandardMaterial map={tex} roughness={0.85} onBeforeCompile={unfiltered} />
       </mesh>
-      <Plaque title={exhibit.title} body={exhibit.description} position={[w / 2 + 0.8, -0.45, 0.04]} width={1.2} height={0.6} />
     </group>
   );
 }
@@ -1147,69 +1132,37 @@ function SpotLamp({ y, from, top }: { y: number; from: number; top: number }) {
   );
 }
 
-// Papan keterangan digambar ke canvas 2D dengan font halaman (Fraunces + Plus Jakarta Sans).
-function Plaque(props: {
-  title: string;
-  body?: string;
-  position: [number, number, number];
-  width: number;
-  height: number;
-  rotationX?: number;
-  titleOnly?: boolean;
-}) {
-  const { title, body = "", width, height, titleOnly } = props;
+// Papan nama ruangan: kotak narasi kunyit bergaris tinta, digambar ke canvas 2D dengan font halaman (Bangers).
+function Plaque(props: { title: string; position: [number, number, number]; width: number; height: number }) {
+  const { title, width, height } = props;
   const texture = useMemo(() => {
     const px = 512 / height;
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(width * px);
     canvas.height = 512;
     const g = canvas.getContext("2d")!;
-    const css = getComputedStyle(document.documentElement);
-    const display = css.getPropertyValue("--font-bangers") || "sans-serif";
-    const sans = css.getPropertyValue("--font-jakarta") || "sans-serif";
-    // judul ruangan: kotak narasi kunyit; keterangan: kertas. Keduanya bergaris tinta seperti panel komik.
-    g.fillStyle = titleOnly ? "#ffc928" : "#fff4dc";
+    const display = getComputedStyle(document.documentElement).getPropertyValue("--font-bangers") || "sans-serif";
+    g.fillStyle = "#ffc928";
     g.fillRect(0, 0, canvas.width, canvas.height);
     g.lineWidth = 28;
     g.strokeStyle = "#17120e";
     g.strokeRect(0, 0, canvas.width, canvas.height);
     g.fillStyle = "#17120e";
-    if (titleOnly) {
-      g.font = `300px ${display}`;
-      g.textAlign = "center";
-      g.textBaseline = "middle";
-      g.fillText(title, canvas.width / 2, 270, canvas.width - 80);
-    } else {
-      const pad = 44;
-      g.font = `86px ${display}`;
-      g.fillText(title, pad, 110, canvas.width - pad * 2);
-      g.font = `38px ${sans}`;
-      wrapText(g, body, pad, 185, canvas.width - pad * 2, 52);
-    }
+    g.font = `300px ${display}`;
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillText(title, canvas.width / 2, 270, canvas.width - 80);
     const tex = new CanvasTexture(canvas);
     tex.anisotropy = 4;
     return tex;
-  }, [title, body, width, height, titleOnly]);
+  }, [title, width, height]);
 
   return (
-    <mesh position={props.position} rotation-x={props.rotationX ?? 0}>
+    <mesh position={props.position}>
       <planeGeometry args={[width, height]} />
       <meshBasicMaterial map={texture} toneMapped={false} />
     </mesh>
   );
-}
-
-function wrapText(g: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number) {
-  let line = "";
-  for (const word of text.split(" ")) {
-    const next = line ? `${line} ${word}` : word;
-    if (g.measureText(next).width > maxWidth && line) {
-      g.fillText(line, x, y);
-      line = word;
-      y += lineHeight;
-    } else line = next;
-  }
-  g.fillText(line, x, y);
 }
 
 class Safe extends Component<{ children: ReactNode; fallback?: ReactNode }, { failed: boolean }> {

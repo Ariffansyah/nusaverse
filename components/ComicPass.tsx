@@ -45,6 +45,12 @@ void main() {
   float lap = abs(1.0 / zl + 1.0 / zr + 1.0 / zu + 1.0 / zd - 4.0 * iz) / iz;
   float depthEdge = smoothstep(0.005, 0.02, lap);
 
+  // foto koleksi (alfa 0, lihat unfiltered): warna asli, hanya garis tepi bingkai
+  if (texture2D(tColor, vUv).a < 0.5) {
+    gl_FragColor = vec4(mix(col, INK, depthEdge * (1.0 - smoothstep(18.0, 40.0, z))), 1.0);
+    return;
+  }
+
   // sobel terang di ruang tampilan: garis untuk ukiran, pola kain, isi foto
   float tl = dot(display(vUv + vec2(-o.x, o.y)), LUMA), tc = dot(display(vUv + vec2(0.0, o.y)), LUMA), tr = dot(display(vUv + o), LUMA);
   float ml = dot(display(vUv - vec2(o.x, 0.0)), LUMA), mr = dot(display(vUv + vec2(o.x, 0.0)), LUMA);
@@ -73,6 +79,12 @@ void main() {
   gl_FragColor = vec4(mix(col, INK, edge), 1.0);
 }
 `;
+
+// onBeforeCompile untuk material yang tidak boleh ikut filter (foto koleksi): alfa 0 ke target, dibaca shader di atas.
+// Material opak digambar tanpa blending, jadi alfa ini sampai ke target apa adanya.
+export const unfiltered = (shader: { fragmentShader: string }) => {
+  shader.fragmentShader = shader.fragmentShader.replace("#include <opaque_fragment>", "#include <opaque_fragment>\ngl_FragColor.a = 0.0;");
+};
 
 const vertexShader = /* glsl */ `
 varying vec2 vUv;
