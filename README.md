@@ -4,7 +4,7 @@ NusaVerse is a browser game about Indonesian culture. You pick a province on the
 
 There are 34 provinces (the map predates the 2022 Papua split) and 335 exhibits, 111 of them 3D models and the rest photos. The game itself is in Indonesian.
 
-Live at [nusaverse.harimato9.workers.dev](https://nusaverse.harimato9.workers.dev).
+Live at [nusaverse.naivaratech.com](https://nusaverse.naivaratech.com).
 
 [![NusaVerse demo](docs/demo.webp)](docs/demo.mp4)
 
