@@ -20,7 +20,7 @@ The map is a paper board tilted in 3D that leans a little toward your mouse. Cli
 
 ### 2. Walk the museum
 
-Every province has its own hall, built with React Three Fiber. It is a barrel vaulted corridor that ends in a half dome, with the main exhibit standing in the middle of the apse. Photos hang on the walls and 3D models stand on pedestals along the way, each under a spotlight. Carpet and trim colors change per island. The hall and the models are drawn in a comic book style with ink outlines and halftone shading, but the photos keep their real colors inside an inked frame, so you can see what a dish or a costume actually looks like. There are no text plaques in the room. You aim at an exhibit to see its name and press E to read about it.
+Every province has its own hall, built with React Three Fiber. It is a barrel vaulted corridor that ends in a half dome, with the main exhibit standing in the middle of the apse. Photos hang on the walls and 3D models stand on pedestals along the way, each under a spotlight. Carpet and trim colors change per island. The hall and the models are drawn in a comic book style with ink outlines and halftone shading, but the photos keep their real colors inside an inked frame, so you can see what a dish or a costume actually looks like. There are no text plaques in the room. You aim at an exhibit to see its name and press E to read about it. Opening a photo exhibit shows it full screen first. Click anywhere or press Esc to close it and read the card.
 
 ![Museum hall for Jawa Barat with the curator mission card](docs/screenshots/museum.webp)
 
